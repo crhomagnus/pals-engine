@@ -382,6 +382,19 @@ test("mouse bridge dry-run executes authorized local commands", async () => {
     assert.equal(body.ok, true);
     assert.equal(body.result.dryRun, true);
     assert.deepEqual(body.result.point, { x: 10, y: 20 });
+
+    const positionResponse = await fetch(`http://127.0.0.1:${port}/position`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-pals-token": "test-token",
+      },
+      body: "{}",
+    });
+    const position = await positionResponse.json();
+    assert.equal(positionResponse.status, 200);
+    assert.equal(position.ok, true);
+    assert.deepEqual(position.result, { x: 0, y: 0, dryRun: true });
   } finally {
     await bridge.close();
   }

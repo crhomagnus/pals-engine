@@ -91,6 +91,12 @@ export class MouseBridge {
       return;
     }
 
+    if (url.pathname === "/position") {
+      const result = await this.position();
+      this.send(response, 200, { ok: true, result });
+      return;
+    }
+
     if (url.pathname === "/sweep") {
       const result = await this.sweep(body);
       this.send(response, 200, { ok: true, result });
@@ -176,14 +182,14 @@ export class MouseBridge {
   }
 
   async position() {
-    if (this.dryRun) return { x: 0, y: 0 };
+    if (this.dryRun) return { x: 0, y: 0, dryRun: true };
     const output = await runProcess(this.tool, ["getmouselocation", "--shell"]);
     const x = Number(output.match(/^X=(\d+)/m)?.[1]);
     const y = Number(output.match(/^Y=(\d+)/m)?.[1]);
     if (!Number.isFinite(x) || !Number.isFinite(y)) {
       throw new Error("Could not read current mouse position.");
     }
-    return { x, y };
+    return { x, y, dryRun: false };
   }
 
   async run(args, metadata) {

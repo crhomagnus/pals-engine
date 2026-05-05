@@ -74,6 +74,9 @@ acao. Para testar sem mover o mouse:
 node bin/pals.js mouse-bridge --dry-run
 ```
 
+O overlay tambem inclui calibracao por dois pontos para melhorar a conversao
+entre coordenadas da pagina e coordenadas reais da tela.
+
 ## Downloads
 
 A extensao gera:

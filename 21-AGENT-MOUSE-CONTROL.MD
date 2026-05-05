@@ -53,6 +53,19 @@ Cole esse token no **PALS Agent Overlay** antes de executar comandos.
 3. Clicar no icone do PALS.
 4. Clicar em **Open Agent Overlay**.
 
+## Calibracao
+
+Antes de usar comandos por alvo, rode a calibracao:
+
+1. Clique em **Calibrate** no overlay.
+2. Coloque o ponteiro real exatamente sobre o marcador `1`.
+3. Clique em **Capture**.
+4. Repita no marcador `2`.
+
+O PALS salva a conversao entre coordenadas da viewport e coordenadas reais da
+tela para aquele origin. Isso melhora a precisao de `mova para o botao login`,
+`clique no campo email` e varreduras pelo ponteiro.
+
 ## Comandos Suportados
 
 Exemplos:
@@ -96,6 +109,7 @@ acidentalmente.
 - O bridge escuta apenas em `127.0.0.1` por padrao.
 - Toda acao de mouse exige token `x-pals-token`.
 - O overlay exige confirmacao via botao **Execute action**.
+- A calibracao e salva por origin no `localStorage` da pagina.
 - O uso correto e limitado a paginas que o operador possui, controla ou esta
   autorizado a testar.
 - O bridge possui `--dry-run` para validar comandos sem mover o mouse real.

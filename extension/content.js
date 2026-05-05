@@ -17,6 +17,9 @@
       shadow: null,
       scan: null,
       pending: null,
+      calibration: loadAgentCalibration(),
+      calibrationFlow: null,
+      calibrationMarker: null,
     },
   };
 
@@ -403,6 +406,9 @@
     const execute = shadow.querySelector("[data-agent-execute]");
     const scan = shadow.querySelector("[data-agent-scan]");
     const test = shadow.querySelector("[data-agent-test]");
+    const calibrate = shadow.querySelector("[data-agent-calibrate]");
+    const captureCalibration = shadow.querySelector("[data-agent-capture-calibration]");
+    const resetCalibration = shadow.querySelector("[data-agent-reset-calibration]");
     const close = shadow.querySelector("[data-agent-close]");
 
     send.addEventListener("click", () => planAgentInstruction(input.value));
@@ -418,10 +424,15 @@
       addAgentLine("agent", scanSummary(state.agent.scan));
     });
     test.addEventListener("click", testAgentBridge);
+    calibrate.addEventListener("click", startAgentCalibration);
+    captureCalibration.addEventListener("click", captureAgentCalibrationPoint);
+    resetCalibration.addEventListener("click", resetAgentCalibration);
     close.addEventListener("click", () => {
+      hideAgentCalibrationMarker();
       host.style.display = "none";
     });
 
+    renderAgentCalibrationStatus();
     addAgentLine(
       "agent",
       "Local agent ready. Start `pals mouse-bridge`, paste its token, then ask me to move, click, scan, or sweep the current page."
@@ -493,6 +504,20 @@
           gap: 8px;
           padding: 10px 14px;
           border-bottom: 1px solid rgba(247, 243, 232, 0.12);
+        }
+        .calibration {
+          display: grid;
+          grid-template-columns: 1fr auto auto auto;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 14px;
+          border-bottom: 1px solid rgba(247, 243, 232, 0.12);
+        }
+        .calibration p {
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
         input, textarea {
           width: 100%;
@@ -571,8 +596,11 @@
           font-weight: 760;
         }
         @media (max-width: 520px) {
-          .bridge, .row {
+          .bridge, .calibration, .row {
             grid-template-columns: 1fr;
+          }
+          .calibration p {
+            white-space: normal;
           }
         }
       </style>
@@ -588,6 +616,12 @@
           <input data-agent-endpoint value="http://127.0.0.1:17381" aria-label="Bridge endpoint">
           <input data-agent-token placeholder="Bridge token" aria-label="Bridge token">
           <button type="button" data-agent-test>Test</button>
+        </div>
+        <div class="calibration">
+          <p data-agent-calibration-status>Calibration not checked.</p>
+          <button type="button" data-agent-calibrate>Calibrate</button>
+          <button type="button" data-agent-capture-calibration>Capture</button>
+          <button type="button" data-agent-reset-calibration>Reset</button>
         </div>
         <div class="log" data-agent-log></div>
         <div class="composer">
@@ -637,7 +671,7 @@
 
     state.agent.pending = action.command;
     setExecuteEnabled(true);
-    addAgentLine("agent", `${instruction.label}. Review and press Execute action.`);
+    addAgentLine("agent", `${instruction.label}. ${describeAgentCommand(action.command)} Review and press Execute action.`);
   }
 
   function buildAgentAction(instruction) {
@@ -668,6 +702,7 @@
           x: screenPoint.x,
           y: screenPoint.y,
           durationMs: 240,
+          viewport: instruction.point,
           source: instruction.point,
         },
       };
@@ -689,6 +724,7 @@
           x: target.screen.x,
           y: target.screen.y,
           durationMs: 260,
+          viewport: target.viewport,
           selector: target.selector,
           name: target.name,
         },
@@ -754,6 +790,162 @@
     }
   }
 
+  function startAgentCalibration() {
+    const points = agentCalibrationViewportPoints();
+    state.agent.calibrationFlow = {
+      step: 0,
+      points,
+      samples: [],
+    };
+    showAgentCalibrationMarker(points[0], "1");
+    renderAgentCalibrationStatus();
+    addAgentLine(
+      "agent",
+      "Calibration started. Put the real pointer exactly over marker 1, then press Capture."
+    );
+  }
+
+  async function captureAgentCalibrationPoint() {
+    if (!state.agent.calibrationFlow) {
+      startAgentCalibration();
+      return;
+    }
+
+    try {
+      const flow = state.agent.calibrationFlow;
+      const viewport = flow.points[flow.step];
+      const response = await callBridge("/position", {});
+      const screen = response.result;
+      flow.samples.push({
+        viewport,
+        screen: { x: screen.x, y: screen.y },
+      });
+
+      if (flow.step === 0) {
+        flow.step = 1;
+        showAgentCalibrationMarker(flow.points[1], "2");
+        renderAgentCalibrationStatus();
+        addAgentLine(
+          "agent",
+          "First point captured. Put the pointer over marker 2, then press Capture."
+        );
+        return;
+      }
+
+      state.agent.calibration = computeAgentCalibration(flow.samples);
+      saveAgentCalibration(state.agent.calibration);
+      state.agent.calibrationFlow = null;
+      hideAgentCalibrationMarker();
+      renderAgentCalibrationStatus();
+      addAgentLine("agent", "Calibration saved. Future target moves will use calibrated screen coordinates.");
+    } catch (error) {
+      addAgentLine("agent", `Calibration error: ${error.message}`);
+    }
+  }
+
+  function resetAgentCalibration() {
+    state.agent.calibration = null;
+    state.agent.calibrationFlow = null;
+    saveAgentCalibration(null);
+    hideAgentCalibrationMarker();
+    renderAgentCalibrationStatus();
+    addAgentLine("agent", "Calibration reset. PALS will use browser geometry fallback.");
+  }
+
+  function agentCalibrationViewportPoints() {
+    const first = {
+      x: clamp(Math.round(window.innerWidth * 0.22), 48, Math.max(48, window.innerWidth - 120)),
+      y: clamp(Math.round(window.innerHeight * 0.22), 48, Math.max(48, window.innerHeight - 120)),
+    };
+    const second = {
+      x: clamp(Math.round(window.innerWidth * 0.78), first.x + 80, Math.max(first.x + 80, window.innerWidth - 48)),
+      y: clamp(Math.round(window.innerHeight * 0.78), first.y + 80, Math.max(first.y + 80, window.innerHeight - 48)),
+    };
+    return [first, second];
+  }
+
+  function computeAgentCalibration(samples) {
+    if (!Array.isArray(samples) || samples.length < 2) {
+      throw new Error("Calibration needs two captured points.");
+    }
+
+    const [first, second] = samples;
+    const viewportDx = second.viewport.x - first.viewport.x;
+    const viewportDy = second.viewport.y - first.viewport.y;
+    if (Math.abs(viewportDx) < 40 || Math.abs(viewportDy) < 40) {
+      throw new Error("Calibration points are too close.");
+    }
+
+    const scaleX = (second.screen.x - first.screen.x) / viewportDx;
+    const scaleY = (second.screen.y - first.screen.y) / viewportDy;
+    if (!Number.isFinite(scaleX) || !Number.isFinite(scaleY) || scaleX <= 0 || scaleY <= 0) {
+      throw new Error("Calibration produced invalid scale.");
+    }
+    if (scaleX < 0.3 || scaleX > 4 || scaleY < 0.3 || scaleY > 4) {
+      throw new Error("Calibration scale is outside the accepted range.");
+    }
+
+    return {
+      offsetX: first.screen.x - first.viewport.x * scaleX,
+      offsetY: first.screen.y - first.viewport.y * scaleY,
+      scaleX,
+      scaleY,
+      samples,
+      createdAt: new Date().toISOString(),
+      origin: location.origin,
+    };
+  }
+
+  function showAgentCalibrationMarker(point, label) {
+    if (!state.agent.calibrationMarker) {
+      const marker = document.createElement("div");
+      marker.style.position = "fixed";
+      marker.style.zIndex = "2147483646";
+      marker.style.width = "34px";
+      marker.style.height = "34px";
+      marker.style.margin = "-17px 0 0 -17px";
+      marker.style.display = "grid";
+      marker.style.placeItems = "center";
+      marker.style.border = "2px solid #45d49a";
+      marker.style.borderRadius = "50%";
+      marker.style.background = "rgba(5, 6, 7, 0.72)";
+      marker.style.color = "#f7f3e8";
+      marker.style.font = "700 13px system-ui, sans-serif";
+      marker.style.pointerEvents = "none";
+      marker.style.boxShadow = "0 0 0 9999px rgba(5, 6, 7, 0.10), 0 0 32px rgba(69, 212, 154, 0.42)";
+      document.documentElement.appendChild(marker);
+      state.agent.calibrationMarker = marker;
+    }
+
+    state.agent.calibrationMarker.textContent = label;
+    state.agent.calibrationMarker.style.left = `${point.x}px`;
+    state.agent.calibrationMarker.style.top = `${point.y}px`;
+    state.agent.calibrationMarker.style.display = "grid";
+  }
+
+  function hideAgentCalibrationMarker() {
+    if (state.agent.calibrationMarker) {
+      state.agent.calibrationMarker.style.display = "none";
+    }
+  }
+
+  function renderAgentCalibrationStatus() {
+    const status = state.agent.shadow?.querySelector("[data-agent-calibration-status]");
+    if (!status) return;
+
+    if (state.agent.calibrationFlow) {
+      status.textContent = `Calibration point ${state.agent.calibrationFlow.step + 1}/2 active.`;
+      return;
+    }
+
+    if (!state.agent.calibration) {
+      status.textContent = "Not calibrated. Using browser geometry fallback.";
+      return;
+    }
+
+    status.textContent = `Calibrated sx=${state.agent.calibration.scaleX.toFixed(2)} sy=${state.agent.calibration.scaleY.toFixed(2)}.`;
+  }
+
   async function callBridge(path, body) {
     const token = bridgeToken();
     if (!token) throw new Error("Paste the mouse bridge token first.");
@@ -813,12 +1005,28 @@
   }
 
   function toScreenPoint(point) {
+    if (state.agent.calibration) {
+      return {
+        x: Math.round(state.agent.calibration.offsetX + point.x * state.agent.calibration.scaleX),
+        y: Math.round(state.agent.calibration.offsetY + point.y * state.agent.calibration.scaleY),
+      };
+    }
+
     const chromeX = Math.max(0, Math.round((window.outerWidth - window.innerWidth) / 2));
     const chromeY = Math.max(0, Math.round(window.outerHeight - window.innerHeight - chromeX));
     return {
       x: Math.round(window.screenX + chromeX + point.x),
       y: Math.round(window.screenY + chromeY + point.y),
     };
+  }
+
+  function describeAgentCommand(command) {
+    if (!command) return "";
+    if (command.type === "type") return `Planned typing: ${command.text.length} characters.`;
+    if (command.type === "sweep") return `Planned sweep: ${command.points.length} screen points.`;
+    const viewport = command.viewport ? ` viewport ${command.viewport.x},${command.viewport.y};` : "";
+    const target = command.name ? ` target "${command.name}";` : "";
+    return `Planned ${command.type}:${target}${viewport} screen ${command.x},${command.y}.`;
   }
 
   function renderAgentScan(scan) {
@@ -861,6 +1069,32 @@
 
   function bridgeToken() {
     return state.agent.shadow.querySelector("[data-agent-token]").value.trim();
+  }
+
+  function loadAgentCalibration() {
+    try {
+      const raw = localStorage.getItem("pals.agent.calibration");
+      if (!raw) return null;
+      const calibration = JSON.parse(raw);
+      if (!calibration || calibration.origin !== location.origin) return null;
+      if (!Number.isFinite(calibration.offsetX) || !Number.isFinite(calibration.offsetY)) return null;
+      if (!Number.isFinite(calibration.scaleX) || !Number.isFinite(calibration.scaleY)) return null;
+      return calibration;
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  function saveAgentCalibration(calibration) {
+    try {
+      if (!calibration) {
+        localStorage.removeItem("pals.agent.calibration");
+        return;
+      }
+      localStorage.setItem("pals.agent.calibration", JSON.stringify(calibration));
+    } catch (_error) {
+      // Calibration persistence is optional.
+    }
   }
 
   function parseAgentInstruction(input) {
@@ -929,6 +1163,10 @@
 
   function wait(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
   }
 
   function cursorForSelector(selector) {
