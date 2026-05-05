@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>PALS Browser Smoke</title>
+    <style>
+      #target {
+        position: absolute;
+        left: 40px;
+        top: 40px;
+        width: 160px;
+        height: 80px;
+        background: #23c483;
+      }
+    </style>
+  </head>
+  <body>
+    <button id="target" type="button">Target</button>
+    <pre id="result">PENDING</pre>
+    <script src="../pals-engine.js"></script>
+    <script>
+      try {
+        const map = PALS.scanPoint({ x: 80, y: 80 });
+        const under = PALS.tools.bodiesUnderPointer(map);
+        const hasTarget = under.some((item) => item.selector === "#target");
+        document.getElementById("result").textContent = hasTarget
+          ? "PALS_SMOKE_PASS"
+          : "PALS_SMOKE_FAIL " + JSON.stringify(PALS.tools.compactSummary(map));
+      } catch (error) {
+        document.getElementById("result").textContent =
+          "PALS_SMOKE_ERROR " + error.message;
+      }
+    </script>
+  </body>
+</html>

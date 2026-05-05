@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+      name="description"
+      content="PALS maps authorized web interfaces with active pointer scanning and turns the result into QA, accessibility, and automation-ready artifacts."
+    >
+    <link rel="icon" href="./assets/pals-logo.svg">
+    <link rel="stylesheet" href="./styles.css">
+    <title>PALS Engine - Pointer-Adaptive Layout Scanner</title>
+  </head>
+  <body>
+    <header class="topbar" data-reveal>
+      <a class="brand" href="#top" aria-label="PALS Engine home">
+        <img class="brand-mark" src="./assets/pals-logo.svg" alt="">
+        <span>PALS Engine</span>
+      </a>
+      <nav class="nav" aria-label="Primary navigation">
+        <a href="#audit">Audit</a>
+        <a href="#workflow">Workflow</a>
+        <a href="#pricing">Pricing</a>
+      </nav>
+      <a class="topbar-action" href="#checkout">Start pilot</a>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-labelledby="hero-title">
+        <canvas id="scan-canvas" aria-hidden="true"></canvas>
+        <div class="hero-shade" aria-hidden="true"></div>
+        <div class="hero-copy" data-reveal>
+          <img class="hero-logo" src="./assets/pals-logo.svg" alt="">
+          <p class="kicker">Pointer-Adaptive Layout Scanner Engine</p>
+          <h1 id="hero-title">PALS Engine</h1>
+          <p class="hero-line">
+            Active pointer scanning for QA teams that need to see hover states,
+            fragile UI regions, accessibility gaps, and automation-ready targets.
+          </p>
+          <div class="hero-actions">
+            <a class="button primary" href="#pricing">View pricing</a>
+            <a class="button secondary" href="./demo.html">Open demo</a>
+          </div>
+        </div>
+        <div class="hero-metrics" aria-label="Product outputs" data-reveal>
+          <span>Markdown reports</span>
+          <span>JSON maps</span>
+          <span>Chrome extension</span>
+          <span>Test export</span>
+        </div>
+      </section>
+
+      <section class="section intro" id="audit" data-reveal>
+        <div>
+          <p class="eyebrow">What it sells first</p>
+          <h2>QA and accessibility audits for authorized pages.</h2>
+        </div>
+        <p>
+          PALS moves the pointer across the viewport, records what the browser
+          reveals at each coordinate, and converts that scan into reports,
+          findings, regions, hover evidence, and starter automation.
+        </p>
+      </section>
+
+      <section class="proof-strip" aria-label="Current MVP capabilities" data-reveal>
+        <div>
+          <strong>Viewport scanner</strong>
+          <span>Adaptive pointer grid with semantic seed points.</span>
+        </div>
+        <div>
+          <strong>Dynamic UI</strong>
+          <span>Hover additions and removals become reviewable evidence.</span>
+        </div>
+        <div>
+          <strong>Automation bridge</strong>
+          <span>Scans export into a portable starter test artifact.</span>
+        </div>
+      </section>
+
+      <section class="workflow" id="workflow">
+        <div class="workflow-sticky" data-reveal>
+          <p class="eyebrow">Delivery flow</p>
+          <h2>From scan to paid audit without building a SaaS first.</h2>
+          <p>
+            The first commercial motion is service assisted by tooling: run PALS
+            locally, deliver artifacts, rescan after fixes, then convert teams
+            into recurring QA coverage.
+          </p>
+        </div>
+        <ol class="steps" aria-label="PALS commercial workflow">
+          <li data-reveal>
+            <span>01</span>
+            <h3>Authorized target</h3>
+            <p>Client provides staging or production pages they own or control.</p>
+          </li>
+          <li data-reveal>
+            <span>02</span>
+            <h3>Pointer scan</h3>
+            <p>PALS maps controls, fields, hover states, dynamic regions, and findings.</p>
+          </li>
+          <li data-reveal>
+            <span>03</span>
+            <h3>Artifact pack</h3>
+            <p>Deliver Markdown, JSON, comparison diff, and starter automation spec.</p>
+          </li>
+          <li data-reveal>
+            <span>04</span>
+            <h3>Rescan and retain</h3>
+            <p>Validate fixes, then offer monthly scans and CI integration.</p>
+          </li>
+        </ol>
+      </section>
+
+      <section class="section pricing-head" id="pricing" data-reveal>
+        <div>
+          <p class="eyebrow">Pilot pricing</p>
+          <h2>Start with manual delivery. Add billing automation after demand.</h2>
+        </div>
+        <p>
+          These offers are designed to sell now with no cloud cost. Payment can
+          start as invoice, Stripe Payment Link, PayPal, or bank transfer.
+        </p>
+      </section>
+
+      <section class="pricing-grid" aria-label="Pricing plans">
+        <article class="price-card" data-plan="Pilot Audit" data-price="299" data-reveal>
+          <p class="plan">Pilot Audit</p>
+          <h3>US$299</h3>
+          <p class="plan-note">One-time scan pack for up to 10 authorized pages.</p>
+          <ul>
+            <li>Markdown QA/A11y report</li>
+            <li>Hover and region evidence</li>
+            <li>One rescan after fixes</li>
+            <li>Starter test export</li>
+          </ul>
+          <button type="button" class="button primary plan-button">Reserve pilot</button>
+        </article>
+
+        <article class="price-card featured" data-plan="Team Monthly" data-price="99" data-reveal>
+          <p class="plan">Team Monthly</p>
+          <h3>US$99/mo</h3>
+          <p class="plan-note">Recurring audit workflow for small frontend teams.</p>
+          <ul>
+            <li>Monthly scan batch</li>
+            <li>Before/after comparison</li>
+            <li>Extension-assisted capture</li>
+            <li>Priority setup support</li>
+          </ul>
+          <button type="button" class="button primary plan-button">Start monthly</button>
+        </article>
+
+        <article class="price-card" data-plan="CI Setup" data-price="499" data-reveal>
+          <p class="plan">CI Setup</p>
+          <h3>US$499+</h3>
+          <p class="plan-note">Implementation package for teams stabilizing browser QA.</p>
+          <ul>
+            <li>Scan-to-spec workflow</li>
+            <li>GitHub Actions guide</li>
+            <li>Selector stability review</li>
+            <li>QA handoff session</li>
+          </ul>
+          <button type="button" class="button primary plan-button">Plan setup</button>
+        </article>
+      </section>
+
+      <section class="checkout" id="checkout" data-reveal>
+        <div>
+          <p class="eyebrow">Manual checkout</p>
+          <h2>Collect the first customers before adding billing code.</h2>
+          <p>
+            This form creates a local lead request and opens an email draft.
+            Replace the recipient in `site/app.js` with the project sales inbox.
+          </p>
+        </div>
+        <form class="lead-form" id="lead-form">
+          <label>
+            Work email
+            <input id="lead-email" name="email" type="email" autocomplete="email" required>
+          </label>
+          <label>
+            Company or project
+            <input id="lead-company" name="company" type="text" autocomplete="organization" required>
+          </label>
+          <label>
+            Selected plan
+            <select id="lead-plan" name="plan">
+              <option>Pilot Audit - US$299</option>
+              <option>Team Monthly - US$99/mo</option>
+              <option>CI Setup - US$499+</option>
+            </select>
+          </label>
+          <label>
+            Authorized URL scope
+            <input
+              id="lead-scope"
+              name="scope"
+              type="url"
+              placeholder="https://app.example.com"
+              autocomplete="url"
+              required
+            >
+          </label>
+          <button class="button primary" type="submit">Create request</button>
+          <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>PALS Engine</span>
+      <span>For authorized QA, accessibility, and engineering automation only.</span>
+    </footer>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

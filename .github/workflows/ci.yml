@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Build and syntax check
+        run: node scripts/prepare-release.js
+
+      - name: Unit tests
+        run: node test/run-tests.js
+
+      - name: Public demo smoke
+        run: node scripts/smoke-public-demo.js

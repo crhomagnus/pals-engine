@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>PALS A11y Smoke</title>
+    <style>
+      body {
+        margin: 32px;
+        font-family: Arial, sans-serif;
+      }
+
+      .icon-button {
+        width: 42px;
+        height: 42px;
+        cursor: pointer;
+      }
+
+      .menu {
+        display: none;
+        margin-top: 12px;
+      }
+
+      .hover-card:hover .menu {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hover-card">
+        <p>Hover here to reveal an action.</p>
+        <button class="icon-button" type="button"></button>
+        <input class="email-field" type="email">
+        <div class="menu">
+          <button type="button">Hidden action</button>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

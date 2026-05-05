@@ -1,0 +1,51 @@
+{
+  "name": "pals-engine",
+  "version": "0.1.0",
+  "description": "Pointer-Adaptive Layout Scanner Engine: active pointer-based interface perception.",
+  "type": "module",
+  "main": "./src/browser/index.js",
+  "browser": "./pals-engine.js",
+  "exports": {
+    ".": "./src/browser/index.js",
+    "./browser": "./pals-engine.js",
+    "./playwright-export": "./src/report/playwright-export.js"
+  },
+  "bin": {
+    "pals": "./bin/pals.js"
+  },
+  "scripts": {
+    "build": "node scripts/build-browser-bundle.js",
+    "check": "node scripts/build-browser-bundle.js && node --check pals-engine.js && node --check bin/pals.js && node --check src/node/cdp-driver.js && node --check src/report/playwright-export.js && node --check scripts/smoke-public-demo.js && node --check scripts/prepare-release.js && node --check extension/content.js && node --check extension/popup.js && node --check extension/report.js && node --check site/app.js && node --check site/demo.js && node --check site/vendor/pals-engine.js",
+    "test": "node test/run-tests.js",
+    "smoke:demo": "node scripts/smoke-public-demo.js",
+    "release": "node scripts/prepare-release.js",
+    "prepack": "node scripts/build-browser-bundle.js"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "pals-engine.js",
+    "README.MD",
+    "16-PLAYWRIGHT-EXPORT.MD"
+  ],
+  "keywords": [
+    "browser-automation",
+    "qa",
+    "accessibility",
+    "pointer-scanning",
+    "layout-scanner"
+  ],
+  "license": "UNLICENSED",
+  "peerDependencies": {
+    "@playwright/test": "^1.56.0",
+    "playwright": "^1.56.0"
+  },
+  "peerDependenciesMeta": {
+    "@playwright/test": {
+      "optional": true
+    },
+    "playwright": {
+      "optional": true
+    }
+  }
+}

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PALS Engine</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main>
+      <header>
+        <span class="mark">PALS</span>
+        <div>
+          <h1>QA Auditor</h1>
+          <p>Pointer-based local interface audit</p>
+        </div>
+      </header>
+
+      <section class="status" aria-live="polite">
+        <span id="state-dot"></span>
+        <div>
+          <strong id="status-title">Checking page</strong>
+          <p id="status-detail">Waiting for content script.</p>
+        </div>
+      </section>
+
+      <section class="actions">
+        <button id="quick-audit" type="button">Quick Audit</button>
+        <button id="start-live" type="button">Start Live Capture</button>
+        <button id="stop-live" type="button">Stop & Save</button>
+      </section>
+
+      <section class="metrics">
+        <div>
+          <span id="metric-samples">0</span>
+          <label>samples</label>
+        </div>
+        <div>
+          <span id="metric-findings">0</span>
+          <label>findings</label>
+        </div>
+        <div>
+          <span id="metric-high">0</span>
+          <label>high</label>
+        </div>
+      </section>
+
+      <section class="downloads">
+        <button id="download-md" type="button" disabled>Download .MD</button>
+        <button id="download-json" type="button" disabled>Download JSON</button>
+      </section>
+
+      <p class="note">
+        Live Capture records real pointer movement. Quick Audit samples a grid.
+      </p>
+    </main>
+    <script src="report.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>

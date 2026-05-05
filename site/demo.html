@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+      name="description"
+      content="Live PALS demo scanning a dynamic authorized web interface directly in the browser."
+    >
+    <link rel="icon" href="./assets/pals-logo.svg">
+    <link rel="stylesheet" href="./demo.css">
+    <title>PALS Engine Live Demo</title>
+  </head>
+  <body>
+    <header class="demo-topbar" data-pals-engine="lens">
+      <a class="brand" href="./index.html" aria-label="Back to PALS Engine home">
+        <img src="./assets/pals-logo.svg" alt="">
+        <span>PALS Engine</span>
+      </a>
+      <nav aria-label="Demo navigation">
+        <a href="./index.html#pricing">Pricing</a>
+        <a class="nav-cta" href="./index.html#checkout">Reserve pilot</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="demo-hero" data-pals-engine="lens">
+        <p class="eyebrow">Public live demo</p>
+        <h1>Watch PALS scan live.</h1>
+        <p>
+          The demo page below contains hidden hover UI, a tooltip, an unlabeled
+          input, and an ambiguous button. PALS moves through the viewport,
+          samples each coordinate, and builds a live audit.
+        </p>
+        <div class="hero-actions">
+          <button class="button primary" id="start-scan" type="button">Run live scan</button>
+          <button class="button secondary" id="reset-scan" type="button">Reset</button>
+        </div>
+      </section>
+
+      <section class="scanner-stage" aria-label="PALS live scanner">
+        <div class="target-wrap">
+          <div class="target-label" data-pals-engine="lens">
+            <span>Authorized target page</span>
+            <strong id="scan-status">Idle</strong>
+          </div>
+
+          <article class="target-page" id="target-page" aria-label="Synthetic page under PALS audit">
+            <header class="target-header">
+              <div>
+                <p>Northstar CRM</p>
+                <h2>Revenue cockpit</h2>
+              </div>
+              <button class="ghost-icon" type="button"></button>
+            </header>
+
+            <nav class="target-nav" aria-label="Synthetic application sections">
+              <button class="nav-trigger" type="button" data-hover-menu>
+                Segments
+              </button>
+              <button class="nav-tab" type="button">Pipeline</button>
+              <button class="nav-tab quiet" type="button">Forecast</button>
+              <div class="flyout-menu" id="segment-menu">
+                <a href="#enterprise">Enterprise accounts</a>
+                <a href="#trial-risk">Trial risk</a>
+                <a href="#renewals">Renewals due</a>
+              </div>
+            </nav>
+
+            <section class="target-grid">
+              <div class="metric-tile" data-hover-tooltip tabindex="0">
+                <span>Latency p95</span>
+                <strong>812ms</strong>
+                <small>Hover reveals service detail</small>
+                <div class="tooltip-bubble" role="tooltip">
+                  API edge is slower for EU trial accounts.
+                </div>
+              </div>
+
+              <div class="metric-tile warm">
+                <span>Blocked deals</span>
+                <strong>17</strong>
+                <small>Owner review required</small>
+              </div>
+
+              <div class="form-tile">
+                <p>Quick filter</p>
+                <input id="revenue-filter" type="text">
+                <small>Intentional missing label for audit signal.</small>
+              </div>
+            </section>
+
+            <section class="action-row">
+              <button class="primary-action" type="button">Create audit note</button>
+              <button class="ambiguous-action" type="button"></button>
+              <button class="danger-hover" type="button" data-hover-danger>
+                More actions
+              </button>
+              <div class="danger-menu" id="danger-menu">
+                <button type="button">Archive segment</button>
+                <button type="button">Export raw list</button>
+              </div>
+            </section>
+          </article>
+
+          <div class="scan-overlay" id="scan-overlay" data-pals-engine="lens" aria-hidden="true">
+            <div class="scan-cursor" id="scan-cursor"></div>
+          </div>
+        </div>
+
+        <aside class="pals-console" data-pals-engine="lens" aria-label="Live PALS scan results">
+          <div class="console-head">
+            <p class="eyebrow">Live output</p>
+            <h2>Scan report</h2>
+          </div>
+
+          <div class="metrics" aria-label="Live scan metrics">
+            <div>
+              <span>Points</span>
+              <strong id="metric-points">0</strong>
+            </div>
+            <div>
+              <span>Elements</span>
+              <strong id="metric-elements">0</strong>
+            </div>
+            <div>
+              <span>Hover regions</span>
+              <strong id="metric-hover">0</strong>
+            </div>
+            <div>
+              <span>Findings</span>
+              <strong id="metric-findings">0</strong>
+            </div>
+          </div>
+
+          <section class="console-section">
+            <h3>Discovered elements</h3>
+            <ul id="element-list" class="result-list"></ul>
+          </section>
+
+          <section class="console-section">
+            <h3>QA/A11y findings</h3>
+            <ul id="finding-list" class="result-list findings"></ul>
+          </section>
+
+          <section class="console-section">
+            <h3>Summary</h3>
+            <pre id="summary-output">Run the scan to generate a browser-side PALS report.</pre>
+          </section>
+        </aside>
+      </section>
+
+      <section class="demo-cta" data-pals-engine="lens">
+        <p class="eyebrow">Pilot audit</p>
+        <h2>Reserve an audit for your own authorized pages.</h2>
+        <a class="button primary" href="./index.html#checkout">Reserve a pilot audit</a>
+      </section>
+    </main>
+
+    <script src="./vendor/pals-engine.js"></script>
+    <script src="./demo.js"></script>
+  </body>
+</html>

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>PALS Hover Smoke</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+      }
+
+      .hover-zone {
+        position: absolute;
+        left: 120px;
+        top: 120px;
+        width: 260px;
+        height: 160px;
+        padding: 24px;
+        background: #ffffff;
+        border: 1px solid #8892a0;
+      }
+
+      .hover-zone:hover .revealed {
+        display: block;
+      }
+
+      .revealed {
+        display: none;
+        margin-top: 24px;
+      }
+
+      button {
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="hover-zone">
+      <h1>Hover Zone</h1>
+      <p>Move the pointer inside this region.</p>
+      <div class="revealed">
+        <button type="button">Revealed Action</button>
+      </div>
+    </section>
+  </body>
+</html>

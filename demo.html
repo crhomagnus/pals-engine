@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="data:,">
+    <title>PALS Engine Demo</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #f7f7f4;
+        color: #181a1f;
+      }
+
+      main {
+        max-width: 880px;
+        margin: 48px auto;
+        padding: 0 24px;
+      }
+
+      .alvo {
+        position: relative;
+        display: grid;
+        gap: 16px;
+        padding: 24px;
+        border: 1px solid #b8bec8;
+        background: #ffffff;
+      }
+
+      .alvo::before {
+        content: "pseudo";
+        position: absolute;
+        right: 12px;
+        top: 12px;
+        padding: 4px 8px;
+        background: #224f8f;
+        color: white;
+        font-size: 12px;
+      }
+
+      button {
+        width: max-content;
+        padding: 10px 14px;
+        border: 0;
+        background: #1e5f46;
+        color: white;
+        cursor: pointer;
+      }
+
+      pre {
+        min-height: 240px;
+        overflow: auto;
+        padding: 16px;
+        background: #17191f;
+        color: #f2f2f2;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="alvo">
+        <h1>PALS Engine</h1>
+        <p>
+          Mova o mouse sobre este bloco e clique para gerar um mapa relacional.
+          A varredura por ponteiro continua sendo o alicerce do projeto.
+        </p>
+        <button type="button">Mapear agora</button>
+      </section>
+      <pre id="saida"></pre>
+    </main>
+    <script src="./pals-engine.js"></script>
+    <script>
+      PALS.observe();
+      PALS.activateLens();
+
+      document.addEventListener("click", function (evento) {
+        var mapa = PALS.scanEvent(evento);
+        document.getElementById("saida").textContent = JSON.stringify(
+          {
+            pointer: mapa.pointer,
+            summary: mapa.summary,
+            firstExplicit: mapa.explicit[0],
+            firstImplicit: mapa.implicit[0],
+            blocked: mapa.blocked,
+          },
+          null,
+          2
+        );
+      });
+    </script>
+  </body>
+</html>
