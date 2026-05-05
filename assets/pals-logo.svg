@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" role="img" aria-labelledby="title desc">
+  <title id="title">PALS Engine logo</title>
+  <desc id="desc">A pointer scanning mark with adaptive layout nodes and a luminous orbital path.</desc>
+  <defs>
+    <linearGradient id="orbital" x1="46" y1="48" x2="274" y2="272" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#e4572e"/>
+      <stop offset="0.48" stop-color="#45d49a"/>
+      <stop offset="1" stop-color="#f7f3e8"/>
+    </linearGradient>
+    <linearGradient id="pointer" x1="124" y1="92" x2="230" y2="248" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fffaf0"/>
+      <stop offset="1" stop-color="#9ff2c9"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feColorMatrix
+        in="blur"
+        result="glow"
+        type="matrix"
+        values="0 0 0 0 0.270 0 0 0 0 0.831 0 0 0 0 0.604 0 0 0 0.55 0"
+      />
+      <feMerge>
+        <feMergeNode in="glow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="320" height="320" rx="68" fill="#050607"/>
+  <path
+    d="M76 196c-23-46-5-104 41-130 44-25 102-12 131 30"
+    fill="none"
+    stroke="url(#orbital)"
+    stroke-width="18"
+    stroke-linecap="round"
+  />
+  <path
+    d="M244 123c19 47-2 103-49 126-43 22-96 9-124-30"
+    fill="none"
+    stroke="url(#orbital)"
+    stroke-width="18"
+    stroke-linecap="round"
+    opacity="0.72"
+  />
+  <g filter="url(#glow)">
+    <rect x="80" y="76" width="54" height="40" rx="8" fill="#f7f3e8" opacity="0.13"/>
+    <rect x="176" y="68" width="70" height="48" rx="9" fill="#45d49a" opacity="0.18"/>
+    <rect x="78" y="188" width="82" height="48" rx="9" fill="#e4572e" opacity="0.18"/>
+    <rect x="184" y="202" width="58" height="36" rx="8" fill="#f7f3e8" opacity="0.13"/>
+    <circle cx="77" cy="196" r="10" fill="#e4572e"/>
+    <circle cx="245" cy="122" r="10" fill="#45d49a"/>
+    <circle cx="159" cy="59" r="6" fill="#f7f3e8"/>
+    <circle cx="164" cy="262" r="6" fill="#f7f3e8"/>
+  </g>
+  <path
+    d="M132 93l109 86-53 8 31 54-31 17-31-56-34 41 9-150z"
+    fill="url(#pointer)"
+    stroke="#050607"
+    stroke-width="10"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M132 93l109 86-53 8 31 54"
+    fill="none"
+    stroke="#fffaf0"
+    stroke-width="5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    opacity="0.68"
+  />
+</svg>
