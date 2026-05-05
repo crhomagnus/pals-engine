@@ -119,6 +119,17 @@ O overlay sempre separa duas etapas:
 Isso permite conversar com o agente sem disparar cliques ou digitacao
 acidentalmente.
 
+## Planos De Multiplos Passos
+
+O agente tambem aceita uma instrucao composta e transforma em uma fila:
+
+```text
+escaneie 10 mil pontos ultrarapido depois mova o mouse para Create audit note
+```
+
+O botao **Run next** avanca uma etapa por vez. Scans executam diretamente.
+Movimentos, cliques e digitacao ficam aguardando **Execute action**.
+
 ## Modelo De Seguranca
 
 - O bridge escuta apenas em `127.0.0.1` por padrao.

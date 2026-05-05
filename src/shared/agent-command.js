@@ -125,6 +125,22 @@ export function parseAgentInstruction(input) {
   return unknown("Instruction not recognized by the local PALS agent.", raw);
 }
 
+export function parseAgentPlan(input) {
+  const raw = String(input || "").trim();
+  if (!raw) return [];
+
+  const parts = raw
+    .split(/\n+|;|\s+(?:e\s+)?depois\s+|\s+then\s+|\s+em\s+seguida\s+/i)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (parts.length <= 1) {
+    return [parseAgentInstruction(raw)];
+  }
+
+  return parts.map((part) => parseAgentInstruction(part));
+}
+
 export function normalizeInstruction(input) {
   return String(input || "")
     .normalize("NFD")

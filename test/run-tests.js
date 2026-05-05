@@ -11,7 +11,7 @@ import {
   comparePageSignatures,
   summarizeRegions,
 } from "../src/shared/adaptive.js";
-import { parseAgentInstruction } from "../src/shared/agent-command.js";
+import { parseAgentInstruction, parseAgentPlan } from "../src/shared/agent-command.js";
 import { startMouseBridge } from "../src/node/mouse-bridge.js";
 import {
   aggregatePointerSamples,
@@ -360,6 +360,16 @@ test("parseAgentInstruction recognizes mouse commands", () => {
   assert.equal(parseAgentInstruction("digite \"hello\"").text, "hello");
   assert.equal(parseAgentInstruction("escaneie 10 mil pontos ultrarapido").type, "dense-scan");
   assert.equal(parseAgentInstruction("escaneie 10 mil pontos ultrarapido").targetPoints, 10000);
+});
+
+test("parseAgentPlan splits multi-step instructions safely", () => {
+  const plan = parseAgentPlan(
+    "escaneie 10 mil pontos ultrarapido depois mova o mouse para Create audit note"
+  );
+  assert.equal(plan.length, 2);
+  assert.equal(plan[0].type, "dense-scan");
+  assert.equal(plan[1].type, "move-target");
+  assert.equal(plan[1].query, "create audit note");
 });
 
 test("mouse bridge dry-run executes authorized local commands", async () => {

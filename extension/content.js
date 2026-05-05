@@ -17,6 +17,7 @@
       shadow: null,
       scan: null,
       pending: null,
+      plan: null,
       calibration: loadAgentCalibration(),
       calibrationFlow: null,
       calibrationMarker: null,
@@ -406,6 +407,8 @@
     const execute = shadow.querySelector("[data-agent-execute]");
     const scan = shadow.querySelector("[data-agent-scan]");
     const dense = shadow.querySelector("[data-agent-dense]");
+    const runNext = shadow.querySelector("[data-agent-run-next]");
+    const clearPlan = shadow.querySelector("[data-agent-clear-plan]");
     const test = shadow.querySelector("[data-agent-test]");
     const calibrate = shadow.querySelector("[data-agent-calibrate]");
     const captureCalibration = shadow.querySelector("[data-agent-capture-calibration]");
@@ -425,6 +428,8 @@
       addAgentLine("agent", scanSummary(state.agent.scan));
     });
     dense.addEventListener("click", () => runAgentDenseScan(10000));
+    runNext.addEventListener("click", runNextAgentPlanStep);
+    clearPlan.addEventListener("click", clearAgentPlan);
     test.addEventListener("click", testAgentBridge);
     calibrate.addEventListener("click", startAgentCalibration);
     captureCalibration.addEventListener("click", scheduleAgentCalibrationCapture);
@@ -435,6 +440,7 @@
     });
 
     renderAgentCalibrationStatus();
+    renderAgentPlanStatus();
     addAgentLine(
       "agent",
       "Local agent ready. Start `pals mouse-bridge`, paste its token, then ask me to move, click, scan, or sweep the current page."
@@ -597,11 +603,26 @@
           color: #f7f3e8;
           font-weight: 760;
         }
+        .planbar {
+          display: grid;
+          grid-template-columns: 1fr auto auto;
+          gap: 8px;
+          align-items: center;
+        }
+        .planbar p {
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
         @media (max-width: 520px) {
-          .bridge, .calibration, .row {
+          .bridge, .calibration, .planbar, .row {
             grid-template-columns: 1fr;
           }
           .calibration p {
+            white-space: normal;
+          }
+          .planbar p {
             white-space: normal;
           }
         }
@@ -632,6 +653,11 @@
             <div><p>targets</p><span>0</span></div>
             <div><p>findings</p><span>0</span></div>
           </div>
+          <div class="planbar">
+            <p data-agent-plan-status>No active plan.</p>
+            <button type="button" data-agent-run-next>Run next</button>
+            <button type="button" data-agent-clear-plan>Clear</button>
+          </div>
           <textarea data-agent-input placeholder="Example: move the mouse to the login button"></textarea>
           <div class="row">
             <button class="safe" type="button" data-agent-send>Plan instruction</button>
@@ -645,12 +671,23 @@
   }
 
   async function planAgentInstruction(raw) {
-    const instruction = parseAgentInstruction(raw);
     addAgentLine("user", raw || "(empty)");
+    const plan = parseAgentPlan(raw);
 
+    if (plan.length > 1) {
+      createAgentPlan(plan);
+      return;
+    }
+
+    const instruction = plan[0] || parseAgentInstruction(raw);
+    await handleAgentInstruction(instruction);
+  }
+
+  async function handleAgentInstruction(instruction, options = {}) {
     if (instruction.type === "unknown") {
       state.agent.pending = null;
       setExecuteEnabled(false);
+      markAgentPlanStep(options.stepIndex, "failed", instruction.reason);
       addAgentLine("agent", instruction.reason);
       return;
     }
@@ -660,12 +697,14 @@
       renderAgentScan(state.agent.scan);
       state.agent.pending = null;
       setExecuteEnabled(false);
+      markAgentPlanStep(options.stepIndex, "completed", "Quick scan completed.");
       addAgentLine("agent", scanSummary(state.agent.scan));
       return;
     }
 
     if (instruction.type === "dense-scan") {
       await runAgentDenseScan(instruction.targetPoints || 10000);
+      markAgentPlanStep(options.stepIndex, "completed", "Dense scan completed.");
       return;
     }
 
@@ -673,13 +712,75 @@
     if (!action.ok) {
       state.agent.pending = null;
       setExecuteEnabled(false);
+      markAgentPlanStep(options.stepIndex, "failed", action.error);
       addAgentLine("agent", action.error);
       return;
     }
 
     state.agent.pending = action.command;
+    if (Number.isInteger(options.stepIndex)) {
+      state.agent.pending.planStepIndex = options.stepIndex;
+      markAgentPlanStep(options.stepIndex, "waiting-confirmation", describeAgentCommand(action.command));
+    }
     setExecuteEnabled(true);
     addAgentLine("agent", `${instruction.label}. ${describeAgentCommand(action.command)} Review and press Execute action.`);
+  }
+
+  function createAgentPlan(instructions) {
+    state.agent.pending = null;
+    setExecuteEnabled(false);
+    state.agent.plan = {
+      createdAt: new Date().toISOString(),
+      steps: instructions.map((instruction, index) => ({
+        index,
+        instruction,
+        status: "pending",
+        note: instruction.label || instruction.reason || instruction.type,
+      })),
+    };
+    renderAgentPlanStatus();
+    addAgentLine("agent", `Plan created with ${instructions.length} steps. Press Run next to start.`);
+  }
+
+  async function runNextAgentPlanStep() {
+    if (!state.agent.plan) {
+      addAgentLine("agent", "No active plan.");
+      return;
+    }
+
+    const waiting = state.agent.plan.steps.find((step) => step.status === "waiting-confirmation");
+    if (waiting) {
+      addAgentLine("agent", `Step ${waiting.index + 1} is waiting for Execute action.`);
+      return;
+    }
+
+    const next = state.agent.plan.steps.find((step) => step.status === "pending");
+    if (!next) {
+      addAgentLine("agent", "Plan finished.");
+      renderAgentPlanStatus();
+      return;
+    }
+
+    markAgentPlanStep(next.index, "running", next.note);
+    addAgentLine("agent", `Running step ${next.index + 1}/${state.agent.plan.steps.length}: ${next.note}`);
+    await handleAgentInstruction(next.instruction, { stepIndex: next.index });
+  }
+
+  function clearAgentPlan() {
+    state.agent.plan = null;
+    state.agent.pending = null;
+    setExecuteEnabled(false);
+    renderAgentPlanStatus();
+    addAgentLine("agent", "Plan cleared.");
+  }
+
+  function markAgentPlanStep(index, status, note) {
+    if (!state.agent.plan || !Number.isInteger(index)) return;
+    const step = state.agent.plan.steps[index];
+    if (!step) return;
+    step.status = status;
+    if (note) step.note = note;
+    renderAgentPlanStatus();
   }
 
   async function runAgentDenseScan(targetPoints) {
@@ -985,10 +1086,12 @@
       } else {
         addAgentLine("agent", "Action executed through the local mouse bridge.");
       }
+      markAgentPlanStep(command.planStepIndex, "completed", "Action executed.");
       state.agent.pending = null;
     } catch (error) {
       if (command.capture) cancelLiveCapture();
       setExecuteEnabled(true);
+      markAgentPlanStep(command.planStepIndex, "failed", error.message);
       addAgentLine("agent", `Bridge error: ${error.message}`);
     }
   }
@@ -1184,6 +1287,34 @@
     }
 
     status.textContent = `Calibrated sx=${state.agent.calibration.scaleX.toFixed(2)} sy=${state.agent.calibration.scaleY.toFixed(2)}.`;
+  }
+
+  function renderAgentPlanStatus() {
+    const status = state.agent.shadow?.querySelector("[data-agent-plan-status]");
+    if (!status) return;
+
+    if (!state.agent.plan) {
+      status.textContent = "No active plan.";
+      return;
+    }
+
+    const steps = state.agent.plan.steps;
+    const completed = steps.filter((step) => step.status === "completed").length;
+    const failed = steps.filter((step) => step.status === "failed").length;
+    const waiting = steps.find((step) => step.status === "waiting-confirmation");
+    const running = steps.find((step) => step.status === "running");
+
+    if (waiting) {
+      status.textContent = `Plan ${completed}/${steps.length}. Step ${waiting.index + 1} awaiting confirmation.`;
+      return;
+    }
+
+    if (running) {
+      status.textContent = `Plan ${completed}/${steps.length}. Step ${running.index + 1} running.`;
+      return;
+    }
+
+    status.textContent = `Plan ${completed}/${steps.length}${failed ? `, ${failed} failed` : ""}.`;
   }
 
   async function callBridge(path, body) {
@@ -1404,6 +1535,18 @@
       return query ? { type: "move-target", query, label: `Move pointer to target "${query}"` } : { type: "unknown", reason: "Move needs coordinates or a target name." };
     }
     return { type: "unknown", reason: "Instruction not recognized by the local PALS agent." };
+  }
+
+  function parseAgentPlan(input) {
+    const raw = String(input || "").trim();
+    if (!raw) return [];
+    const parts = raw
+      .split(/\n+|;|\s+(?:e\s+)?depois\s+|\s+then\s+|\s+em\s+seguida\s+/i)
+      .map((part) => part.trim())
+      .filter(Boolean);
+
+    if (parts.length <= 1) return [parseAgentInstruction(raw)];
+    return parts.map((part) => parseAgentInstruction(part));
   }
 
   function normalizeInstruction(input) {
