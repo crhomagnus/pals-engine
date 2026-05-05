@@ -15,7 +15,7 @@
   },
   "scripts": {
     "build": "node scripts/build-browser-bundle.js",
-    "check": "node scripts/build-browser-bundle.js && node --check pals-engine.js && node --check bin/pals.js && node --check src/node/cdp-driver.js && node --check src/report/playwright-export.js && node --check scripts/smoke-public-demo.js && node --check scripts/prepare-release.js && node --check extension/content.js && node --check extension/popup.js && node --check extension/report.js && node --check site/app.js && node --check site/demo.js && node --check site/vendor/pals-engine.js",
+    "check": "node scripts/build-browser-bundle.js && node --check pals-engine.js && node --check bin/pals.js && node --check src/node/cdp-driver.js && node --check src/node/mouse-bridge.js && node --check src/shared/agent-command.js && node --check src/report/playwright-export.js && node --check scripts/smoke-public-demo.js && node --check scripts/prepare-release.js && node --check extension/content.js && node --check extension/popup.js && node --check extension/report.js && node --check site/app.js && node --check site/demo.js && node --check site/vendor/pals-engine.js",
     "test": "node test/run-tests.js",
     "smoke:demo": "node scripts/smoke-public-demo.js",
     "release": "node scripts/prepare-release.js",
@@ -26,7 +26,8 @@
     "src/",
     "pals-engine.js",
     "README.MD",
-    "16-PLAYWRIGHT-EXPORT.MD"
+    "16-PLAYWRIGHT-EXPORT.MD",
+    "21-AGENT-MOUSE-CONTROL.MD"
   ],
   "keywords": [
     "browser-automation",

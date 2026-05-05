@@ -11,6 +11,8 @@ import {
   comparePageSignatures,
   summarizeRegions,
 } from "../src/shared/adaptive.js";
+import { parseAgentInstruction } from "../src/shared/agent-command.js";
+import { startMouseBridge } from "../src/node/mouse-bridge.js";
 import {
   aggregatePointerSamples,
   generateMarkdownReport,
@@ -348,11 +350,48 @@ test("generatePlaywrightSpec exports semantic locators and review TODOs", () => 
   assert.equal(targets.fields.length, 1);
 });
 
+test("parseAgentInstruction recognizes mouse commands", () => {
+  assert.deepEqual(parseAgentInstruction("mova o mouse para x=120 y=240").point, {
+    x: 120,
+    y: 240,
+  });
+  assert.equal(parseAgentInstruction("clique no botao login").type, "click-target");
+  assert.equal(parseAgentInstruction("varra a tela com o ponteiro").type, "sweep");
+  assert.equal(parseAgentInstruction("digite \"hello\"").text, "hello");
+});
+
+test("mouse bridge dry-run executes authorized local commands", async () => {
+  const bridge = await startMouseBridge({
+    port: 0,
+    token: "test-token",
+    dryRun: true,
+  });
+  const { port } = bridge.server.address();
+
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}/move`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-pals-token": "test-token",
+      },
+      body: JSON.stringify({ x: 10, y: 20 }),
+    });
+    const body = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(body.ok, true);
+    assert.equal(body.result.dryRun, true);
+    assert.deepEqual(body.result.point, { x: 10, y: 20 });
+  } finally {
+    await bridge.close();
+  }
+});
+
 let failures = 0;
 
 for (const item of tests) {
   try {
-    item.fn();
+    await item.fn();
     console.log(`ok - ${item.name}`);
   } catch (error) {
     failures += 1;

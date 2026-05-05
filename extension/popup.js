@@ -5,6 +5,7 @@ const elements = {
   statusTitle: document.getElementById("status-title"),
   statusDetail: document.getElementById("status-detail"),
   quickAudit: document.getElementById("quick-audit"),
+  openAgent: document.getElementById("open-agent"),
   startLive: document.getElementById("start-live"),
   stopLive: document.getElementById("stop-live"),
   downloadMd: document.getElementById("download-md"),
@@ -18,6 +19,17 @@ elements.quickAudit.addEventListener("click", async () => {
   setWorking("Running quick audit", "Sampling visible viewport grid.");
   const response = await sendToActiveTab({ type: "PALS_QUICK_AUDIT" });
   handleScanResponse(response);
+});
+
+elements.openAgent.addEventListener("click", async () => {
+  setWorking("Opening agent overlay", "Injecting local control surface.");
+  const response = await sendToActiveTab({ type: "PALS_OPEN_AGENT" });
+  if (response.ok) {
+    setReady(response);
+    window.close();
+  } else {
+    setError(response.error);
+  }
 });
 
 elements.startLive.addEventListener("click", async () => {

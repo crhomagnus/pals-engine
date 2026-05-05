@@ -36,6 +36,7 @@ acessibilidade, QA, automacao assistida e APIs comerciais.
 - [18-PUBLIC-DEMO.MD](18-PUBLIC-DEMO.MD)
 - [19-DISTRIBUTION-KIT.MD](19-DISTRIBUTION-KIT.MD)
 - [20-CHROME-WEB-STORE-SUBMISSION.MD](20-CHROME-WEB-STORE-SUBMISSION.MD)
+- [21-AGENT-MOUSE-CONTROL.MD](21-AGENT-MOUSE-CONTROL.MD)
 - [CHANGELOG.MD](CHANGELOG.MD)
 
 ## Codigo Existente
@@ -46,6 +47,8 @@ acessibilidade, QA, automacao assistida e APIs comerciais.
 - `src/report/`: relatorios Markdown, findings QA/A11y e comparacao entre scans.
 - `src/report/playwright-export.js`: geracao de specs Playwright a partir do scan.
 - `src/shared/adaptive.js`: planejamento adaptativo, refinamento e regioes.
+- `src/shared/agent-command.js`: parser local de comandos conversacionais do agente.
+- `src/node/mouse-bridge.js`: bridge local para movimento real do ponteiro via `xdotool`.
 - `bin/pals.js`: CLI com `pals scan`, `pals compare` e `pals export-playwright`.
 - `extension/`: extensao Chrome MV3 para auditoria local e captura viva.
 - `site/`: landing page comercial estatica, demo publica, pricing e lead flow manual.
@@ -62,6 +65,8 @@ node bin/pals.js --help
 node bin/pals.js scan http://localhost:3000 --adaptive --out report.MD --json scan.json
 node bin/pals.js compare baseline.json scan.json --out diff.MD --json diff.json
 node bin/pals.js export-playwright scan.json --out pals.generated.spec.js
+node bin/pals.js mouse-bridge
+node bin/pals.js mouse-bridge --dry-run
 node scripts/smoke-public-demo.js
 node scripts/prepare-release.js
 python3 -m http.server 8080
@@ -106,3 +111,4 @@ O CLI ja gera um relatorio inicial de auditoria com:
 - demo publica com scanner vivo no navegador.
 - release kit com site estatico, ZIP da extensao e workflows de CI/publicacao.
 - pacote de submissao manual para Chrome Web Store.
+- overlay de agente com bridge local para mover o ponteiro real em paginas autorizadas.

@@ -12,6 +12,8 @@ await run("node", ["scripts/build-browser-bundle.js"]);
 await run("node", ["--check", "pals-engine.js"]);
 await run("node", ["--check", "bin/pals.js"]);
 await run("node", ["--check", "src/node/cdp-driver.js"]);
+await run("node", ["--check", "src/node/mouse-bridge.js"]);
+await run("node", ["--check", "src/shared/agent-command.js"]);
 await run("node", ["--check", "src/report/playwright-export.js"]);
 await run("node", ["--check", "scripts/smoke-public-demo.js"]);
 await run("node", ["--check", "scripts/prepare-release.js"]);

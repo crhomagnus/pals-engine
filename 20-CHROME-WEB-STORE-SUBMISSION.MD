@@ -131,6 +131,11 @@ QA/accessibility findings locally in the browser to generate audit artifacts.
 The extension does not transmit scanned page content to PALS servers, does not
 sell user data, does not use data for advertising, and does not load remote
 code.
+
+If the user starts the optional PALS Mouse Bridge, the extension can send
+explicit pointer commands to a localhost process at 127.0.0.1 using a session
+token shown by that local process. The bridge is used only to move/click/type on
+the user's own machine after explicit user action.
 ```
 
 Privacy policy URL:
@@ -155,6 +160,8 @@ No, the extension does not use remote code.
 5. Confirm that metrics update and the Markdown/JSON download buttons become enabled.
 6. Click Live Capture, move the pointer over the demo page, then click Stop Live Capture.
 7. Download the local Markdown or JSON report.
+8. Optional local pointer test: run `node bin/pals.js mouse-bridge --dry-run`,
+   open Agent Overlay, paste the token, and issue `move the mouse to x=100 y=100`.
 
 No account, login, payment, or external service is required.
 ```

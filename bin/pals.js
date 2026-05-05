@@ -18,6 +18,7 @@ import { compareScans, generateCompareMarkdown } from "../src/report/compare.js"
 import { generateFindings } from "../src/report/findings.js";
 import { generatePlaywrightSpec } from "../src/report/playwright-export.js";
 import { createCdpBrowser } from "../src/node/cdp-driver.js";
+import { startMouseBridge } from "../src/node/mouse-bridge.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -49,7 +50,23 @@ async function main() {
     return;
   }
 
+  if (command === "mouse-bridge") {
+    await mouseBridgeCommand(args);
+    return;
+  }
+
   throw new Error(`unknown command "${command}"`);
+}
+
+async function mouseBridgeCommand(args) {
+  const options = parseMouseBridgeArgs(args);
+  const bridge = await startMouseBridge(options);
+  console.log("PALS mouse bridge is running.");
+  console.log(`Endpoint: http://${bridge.host}:${bridge.port}`);
+  console.log(`Token: ${bridge.token}`);
+  console.log(`Mode: ${bridge.dryRun ? "dry-run" : "real pointer control"}`);
+  console.log("Paste the token into the PALS Agent Overlay before executing mouse actions.");
+  await new Promise(() => {});
 }
 
 async function exportPlaywrightCommand(args) {
@@ -471,6 +488,28 @@ function parseExportPlaywrightArgs(args) {
   return options;
 }
 
+function parseMouseBridgeArgs(args) {
+  const options = {
+    host: "127.0.0.1",
+    port: 17381,
+    token: null,
+    dryRun: false,
+    tool: "xdotool",
+  };
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === "--host") options.host = requireValue(args, ++index, arg);
+    else if (arg === "--port") options.port = numberValue(args, ++index, arg);
+    else if (arg === "--token") options.token = requireValue(args, ++index, arg);
+    else if (arg === "--dry-run") options.dryRun = true;
+    else if (arg === "--tool") options.tool = requireValue(args, ++index, arg);
+    else throw new Error(`unknown mouse-bridge option "${arg}"`);
+  }
+
+  return options;
+}
+
 async function loadPlaywright() {
   try {
     return await import("playwright");
@@ -497,6 +536,7 @@ Usage:
   pals scan <url> [options]
   pals compare <before.json> <after.json> [options]
   pals export-playwright <scan.json> [options]
+  pals mouse-bridge [options]
 
 Scan options:
   --out <file>          Markdown report path. Default: pals-scan-report.MD
@@ -523,5 +563,12 @@ Export Playwright options:
   --max-fields <n>      Maximum form fields. Default: 12
   --max-hover-regions <n> Maximum hover regions. Default: 8
   --max-findings <n>    Maximum TODO findings. Default: 20
+
+Mouse bridge options:
+  --host <host>          Bind host. Default: 127.0.0.1
+  --port <port>          Bind port. Default: 17381
+  --token <token>        Shared token for the Agent Overlay. Default: random
+  --dry-run              Do not move the real pointer; return planned actions.
+  --tool <binary>        Pointer tool. Default: xdotool
 `);
 }

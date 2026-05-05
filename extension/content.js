@@ -12,6 +12,12 @@
     liveStartedAt: null,
     lastSampleAt: 0,
     stopLens: null,
+    agent: {
+      root: null,
+      shadow: null,
+      scan: null,
+      pending: null,
+    },
   };
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
@@ -51,6 +57,14 @@
     if (message.type === "PALS_CANCEL_LIVE") {
       cancelLiveCapture();
       return status();
+    }
+
+    if (message.type === "PALS_OPEN_AGENT") {
+      openAgentOverlay();
+      return {
+        ...status(),
+        title: "PALS Agent Overlay",
+      };
     }
 
     throw new Error(`Unknown PALS message: ${message.type}`);
@@ -360,6 +374,561 @@
       seen.add(key);
       return true;
     });
+  }
+
+  function openAgentOverlay() {
+    if (state.agent.root) {
+      state.agent.root.style.display = "block";
+      const input = state.agent.shadow.querySelector("[data-agent-input]");
+      if (input) input.focus();
+      return;
+    }
+
+    const host = document.createElement("div");
+    host.id = "pals-agent-overlay-host";
+    host.style.position = "fixed";
+    host.style.inset = "auto 18px 18px auto";
+    host.style.zIndex = "2147483647";
+    host.style.width = "min(420px, calc(100vw - 28px))";
+    host.style.maxHeight = "min(680px, calc(100vh - 28px))";
+    document.documentElement.appendChild(host);
+
+    const shadow = host.attachShadow({ mode: "open" });
+    shadow.innerHTML = agentOverlayMarkup();
+    state.agent.root = host;
+    state.agent.shadow = shadow;
+
+    const input = shadow.querySelector("[data-agent-input]");
+    const send = shadow.querySelector("[data-agent-send]");
+    const execute = shadow.querySelector("[data-agent-execute]");
+    const scan = shadow.querySelector("[data-agent-scan]");
+    const test = shadow.querySelector("[data-agent-test]");
+    const close = shadow.querySelector("[data-agent-close]");
+
+    send.addEventListener("click", () => planAgentInstruction(input.value));
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+        planAgentInstruction(input.value);
+      }
+    });
+    execute.addEventListener("click", executePendingAgentAction);
+    scan.addEventListener("click", () => {
+      state.agent.scan = quickAudit({ step: 150, margin: 10 });
+      renderAgentScan(state.agent.scan);
+      addAgentLine("agent", scanSummary(state.agent.scan));
+    });
+    test.addEventListener("click", testAgentBridge);
+    close.addEventListener("click", () => {
+      host.style.display = "none";
+    });
+
+    addAgentLine(
+      "agent",
+      "Local agent ready. Start `pals mouse-bridge`, paste its token, then ask me to move, click, scan, or sweep the current page."
+    );
+    input.focus();
+  }
+
+  function agentOverlayMarkup() {
+    return `
+      <style>
+        :host {
+          color-scheme: dark;
+          font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+        * { box-sizing: border-box; }
+        .shell {
+          overflow: hidden;
+          color: #f7f3e8;
+          background: rgba(5, 6, 7, 0.96);
+          border: 1px solid rgba(247, 243, 232, 0.18);
+          border-radius: 8px;
+          box-shadow: 0 24px 80px rgba(0, 0, 0, 0.46);
+          backdrop-filter: blur(18px);
+        }
+        header {
+          min-height: 54px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 12px 14px;
+          border-bottom: 1px solid rgba(247, 243, 232, 0.14);
+        }
+        h2 {
+          margin: 0;
+          font-size: 14px;
+          letter-spacing: 0;
+        }
+        p {
+          margin: 0;
+          color: #b9b6ad;
+          font-size: 12px;
+          line-height: 1.35;
+        }
+        button, input, textarea {
+          font: inherit;
+        }
+        button {
+          min-height: 34px;
+          border: 1px solid rgba(247, 243, 232, 0.18);
+          border-radius: 7px;
+          background: rgba(247, 243, 232, 0.07);
+          color: #f7f3e8;
+          cursor: pointer;
+        }
+        button:hover:not(:disabled) {
+          border-color: rgba(247, 243, 232, 0.46);
+        }
+        button:disabled {
+          opacity: 0.45;
+          cursor: not-allowed;
+        }
+        .close {
+          width: 34px;
+        }
+        .bridge {
+          display: grid;
+          grid-template-columns: 1fr 1fr auto;
+          gap: 8px;
+          padding: 10px 14px;
+          border-bottom: 1px solid rgba(247, 243, 232, 0.12);
+        }
+        input, textarea {
+          width: 100%;
+          border: 1px solid rgba(247, 243, 232, 0.18);
+          border-radius: 7px;
+          color: #f7f3e8;
+          background: rgba(247, 243, 232, 0.08);
+          outline: none;
+        }
+        input {
+          min-height: 34px;
+          padding: 8px 10px;
+          font-size: 12px;
+        }
+        textarea {
+          min-height: 78px;
+          resize: vertical;
+          padding: 10px;
+          line-height: 1.4;
+        }
+        input:focus, textarea:focus {
+          border-color: #45d49a;
+        }
+        .log {
+          display: grid;
+          gap: 8px;
+          max-height: 220px;
+          overflow: auto;
+          padding: 12px 14px;
+        }
+        .line {
+          display: grid;
+          gap: 4px;
+          padding-bottom: 8px;
+          border-bottom: 1px solid rgba(247, 243, 232, 0.08);
+        }
+        .line strong {
+          color: #45d49a;
+          font-size: 11px;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+        }
+        .line.user strong { color: #e2c044; }
+        .composer {
+          display: grid;
+          gap: 8px;
+          padding: 12px 14px 14px;
+          border-top: 1px solid rgba(247, 243, 232, 0.12);
+        }
+        .row {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+        }
+        .primary {
+          border-color: transparent;
+          background: #e4572e;
+        }
+        .safe {
+          border-color: transparent;
+          background: #1f6f54;
+        }
+        .summary {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 1px;
+          background: rgba(247, 243, 232, 0.12);
+        }
+        .summary div {
+          padding: 8px;
+          background: rgba(247, 243, 232, 0.06);
+        }
+        .summary span {
+          display: block;
+          color: #f7f3e8;
+          font-weight: 760;
+        }
+        @media (max-width: 520px) {
+          .bridge, .row {
+            grid-template-columns: 1fr;
+          }
+        }
+      </style>
+      <section class="shell" aria-label="PALS Agent Overlay">
+        <header>
+          <div>
+            <h2>PALS Agent Overlay</h2>
+            <p>Local pointer control for authorized pages.</p>
+          </div>
+          <button class="close" type="button" data-agent-close aria-label="Close">x</button>
+        </header>
+        <div class="bridge">
+          <input data-agent-endpoint value="http://127.0.0.1:17381" aria-label="Bridge endpoint">
+          <input data-agent-token placeholder="Bridge token" aria-label="Bridge token">
+          <button type="button" data-agent-test>Test</button>
+        </div>
+        <div class="log" data-agent-log></div>
+        <div class="composer">
+          <div class="summary" data-agent-summary>
+            <div><p>samples</p><span>0</span></div>
+            <div><p>targets</p><span>0</span></div>
+            <div><p>findings</p><span>0</span></div>
+          </div>
+          <textarea data-agent-input placeholder="Example: move the mouse to the login button"></textarea>
+          <div class="row">
+            <button class="safe" type="button" data-agent-send>Plan instruction</button>
+            <button class="primary" type="button" data-agent-execute disabled>Execute action</button>
+          </div>
+          <button type="button" data-agent-scan>Run PALS scan</button>
+        </div>
+      </section>
+    `;
+  }
+
+  function planAgentInstruction(raw) {
+    const instruction = parseAgentInstruction(raw);
+    addAgentLine("user", raw || "(empty)");
+
+    if (instruction.type === "unknown") {
+      state.agent.pending = null;
+      setExecuteEnabled(false);
+      addAgentLine("agent", instruction.reason);
+      return;
+    }
+
+    if (instruction.type === "scan") {
+      state.agent.scan = quickAudit({ step: 150, margin: 10 });
+      renderAgentScan(state.agent.scan);
+      state.agent.pending = null;
+      setExecuteEnabled(false);
+      addAgentLine("agent", scanSummary(state.agent.scan));
+      return;
+    }
+
+    const action = buildAgentAction(instruction);
+    if (!action.ok) {
+      state.agent.pending = null;
+      setExecuteEnabled(false);
+      addAgentLine("agent", action.error);
+      return;
+    }
+
+    state.agent.pending = action.command;
+    setExecuteEnabled(true);
+    addAgentLine("agent", `${instruction.label}. Review and press Execute action.`);
+  }
+
+  function buildAgentAction(instruction) {
+    if (instruction.type === "sweep") {
+      const points = buildGrid({
+        width: window.innerWidth,
+        height: window.innerHeight,
+        step: instruction.step || 160,
+        margin: 24,
+      }).map(toScreenPoint);
+      return {
+        ok: true,
+        command: {
+          type: "sweep",
+          points,
+          durationMs: Math.min(18000, points.length * 38),
+          capture: true,
+        },
+      };
+    }
+
+    if (instruction.type === "move-coordinates" || instruction.type === "click-coordinates") {
+      const screenPoint = toScreenPoint(instruction.point);
+      return {
+        ok: true,
+        command: {
+          type: instruction.type.startsWith("click") ? "click" : "move",
+          x: screenPoint.x,
+          y: screenPoint.y,
+          durationMs: 240,
+          source: instruction.point,
+        },
+      };
+    }
+
+    if (instruction.type === "move-target" || instruction.type === "click-target") {
+      const target = resolveAgentTarget(instruction.query);
+      if (!target) {
+        return {
+          ok: false,
+          error: `I could not find a visible target matching "${instruction.query}". Run a scan or use coordinates.`,
+        };
+      }
+
+      return {
+        ok: true,
+        command: {
+          type: instruction.type.startsWith("click") ? "click" : "move",
+          x: target.screen.x,
+          y: target.screen.y,
+          durationMs: 260,
+          selector: target.selector,
+          name: target.name,
+        },
+      };
+    }
+
+    if (instruction.type === "type") {
+      return {
+        ok: true,
+        command: {
+          type: "type",
+          text: instruction.text,
+        },
+      };
+    }
+
+    return { ok: false, error: "Unsupported agent action." };
+  }
+
+  async function executePendingAgentAction() {
+    const command = state.agent.pending;
+    if (!command) return;
+
+    try {
+      setExecuteEnabled(false);
+      if (command.capture) startLiveCapture({ lens: true });
+
+      if (command.type === "click") {
+        await callBridge("/move", { x: command.x, y: command.y, durationMs: command.durationMs });
+        await callBridge("/click", { button: 1 });
+      } else if (command.type === "move") {
+        await callBridge("/move", { x: command.x, y: command.y, durationMs: command.durationMs });
+      } else if (command.type === "sweep") {
+        await callBridge("/sweep", command);
+      } else if (command.type === "type") {
+        await callBridge("/type", { text: command.text });
+      }
+
+      if (command.capture) {
+        await wait(180);
+        state.agent.scan = stopLiveCapture();
+        renderAgentScan(state.agent.scan);
+        addAgentLine("agent", `Sweep completed. ${scanSummary(state.agent.scan)}`);
+      } else {
+        addAgentLine("agent", "Action executed through the local mouse bridge.");
+      }
+      state.agent.pending = null;
+    } catch (error) {
+      if (command.capture) cancelLiveCapture();
+      setExecuteEnabled(true);
+      addAgentLine("agent", `Bridge error: ${error.message}`);
+    }
+  }
+
+  async function testAgentBridge() {
+    try {
+      const response = await fetch(`${bridgeEndpoint()}/health`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const body = await response.json();
+      addAgentLine("agent", `Bridge online (${body.dryRun ? "dry-run" : "real pointer"}).`);
+    } catch (error) {
+      addAgentLine("agent", `Bridge offline: ${error.message}. Start: pals mouse-bridge`);
+    }
+  }
+
+  async function callBridge(path, body) {
+    const token = bridgeToken();
+    if (!token) throw new Error("Paste the mouse bridge token first.");
+
+    const response = await fetch(`${bridgeEndpoint()}${path}`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-pals-token": token,
+      },
+      body: JSON.stringify(body),
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || payload.ok === false) {
+      throw new Error(payload.error || `HTTP ${response.status}`);
+    }
+    return payload;
+  }
+
+  function resolveAgentTarget(query) {
+    if (!state.agent.scan) {
+      state.agent.scan = quickAudit({ step: 150, margin: 10 });
+      renderAgentScan(state.agent.scan);
+    }
+
+    const normalizedQuery = normalizeInstruction(query);
+    const candidates = [
+      ...(state.agent.scan.semantic?.interactive || []),
+      ...(state.agent.scan.semantic?.fields || []),
+    ];
+
+    let best = null;
+    for (const item of candidates) {
+      const haystack = normalizeInstruction(
+        [item.accessibleName, item.label, item.name, item.role, item.tag, item.selector].join(" ")
+      );
+      const score = normalizedQuery
+        .split(/\s+/)
+        .filter((token) => token && haystack.includes(token)).length;
+      if (score <= 0 || !item.bounds) continue;
+      if (!best || score > best.score) best = { item, score };
+    }
+
+    if (!best) return null;
+    const bounds = best.item.bounds;
+    const viewport = {
+      x: Math.round(bounds.x + bounds.width / 2),
+      y: Math.round(bounds.y + bounds.height / 2),
+    };
+    return {
+      selector: best.item.selector,
+      name: best.item.accessibleName || best.item.label || best.item.selector,
+      viewport,
+      screen: toScreenPoint(viewport),
+    };
+  }
+
+  function toScreenPoint(point) {
+    const chromeX = Math.max(0, Math.round((window.outerWidth - window.innerWidth) / 2));
+    const chromeY = Math.max(0, Math.round(window.outerHeight - window.innerHeight - chromeX));
+    return {
+      x: Math.round(window.screenX + chromeX + point.x),
+      y: Math.round(window.screenY + chromeY + point.y),
+    };
+  }
+
+  function renderAgentScan(scan) {
+    const summary = state.agent.shadow.querySelector("[data-agent-summary]");
+    if (!summary) return;
+    const cells = summary.querySelectorAll("span");
+    cells[0].textContent = String(scan.aggregate?.points || 0);
+    cells[1].textContent = String(scan.semantic?.summary?.interactive || 0);
+    cells[2].textContent = String(scan.findings?.summary?.total || 0);
+  }
+
+  function scanSummary(scan) {
+    return `Scan found ${scan.aggregate.points} samples, ${scan.semantic.summary.interactive} interactive targets, ${scan.semantic.summary.fields} fields, and ${scan.findings.summary.total} findings.`;
+  }
+
+  function addAgentLine(kind, text) {
+    const log = state.agent.shadow.querySelector("[data-agent-log]");
+    if (!log) return;
+    const line = document.createElement("div");
+    line.className = `line ${kind}`;
+    const label = document.createElement("strong");
+    label.textContent = kind === "user" ? "You" : "PALS";
+    const body = document.createElement("p");
+    body.textContent = String(text || "");
+    line.append(label, body);
+    log.appendChild(line);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function setExecuteEnabled(enabled) {
+    const button = state.agent.shadow?.querySelector("[data-agent-execute]");
+    if (button) button.disabled = !enabled;
+  }
+
+  function bridgeEndpoint() {
+    return state.agent.shadow
+      .querySelector("[data-agent-endpoint]")
+      .value.replace(/\/+$/, "");
+  }
+
+  function bridgeToken() {
+    return state.agent.shadow.querySelector("[data-agent-token]").value.trim();
+  }
+
+  function parseAgentInstruction(input) {
+    const raw = String(input || "").trim();
+    const normalized = normalizeInstruction(raw);
+    if (!normalized) return { type: "unknown", reason: "Empty instruction." };
+
+    const coordinate = parseCoordinates(normalized);
+    const typed = parseTypeText(raw);
+
+    if (/\b(varra|varrer|sweep|scan mouse|escaneie com mouse)\b/.test(normalized)) {
+      return { type: "sweep", step: 150, label: "Sweep current viewport with the real pointer" };
+    }
+    if (/\b(scan|escaneie|auditoria|audite|analisar|analise)\b/.test(normalized)) {
+      return { type: "scan", label: "Run local PALS scan" };
+    }
+    if (typed) return { type: "type", text: typed, label: `Type ${typed.length} characters` };
+    if (/\b(clique|click|pressione|apertar|aperte)\b/.test(normalized)) {
+      if (coordinate) return { type: "click-coordinates", point: coordinate, label: `Click ${coordinate.x}, ${coordinate.y}` };
+      const query = extractTargetQuery(normalized);
+      return query ? { type: "click-target", query, label: `Click target "${query}"` } : { type: "unknown", reason: "Click needs coordinates or a target name." };
+    }
+    if (/\b(mova|mover|move|va|ir|ponteiro|cursor|mouse)\b/.test(normalized)) {
+      if (coordinate) return { type: "move-coordinates", point: coordinate, label: `Move pointer to ${coordinate.x}, ${coordinate.y}` };
+      const query = extractTargetQuery(normalized);
+      return query ? { type: "move-target", query, label: `Move pointer to target "${query}"` } : { type: "unknown", reason: "Move needs coordinates or a target name." };
+    }
+    return { type: "unknown", reason: "Instruction not recognized by the local PALS agent." };
+  }
+
+  function normalizeInstruction(input) {
+    return String(input || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^\w\s=,.'"#:-]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function extractTargetQuery(normalizedInput) {
+    const stop = new Set(["a", "ao", "botao", "button", "campo", "clique", "click", "cursor", "de", "do", "em", "ir", "mova", "mover", "mouse", "no", "o", "para", "ponteiro", "the", "to", "va"]);
+    const quoted = normalizedInput.match(/["']([^"']{2,80})["']/);
+    const source = quoted ? quoted[1] : normalizedInput;
+    return [...new Set(source.split(/\s+/).filter((token) => token.length > 1 && !stop.has(token)))]
+      .slice(0, 6)
+      .join(" ");
+  }
+
+  function parseCoordinates(normalizedInput) {
+    const xy = normalizedInput.match(/\bx\s*=?\s*(\d{1,5})\D{0,12}\by\s*=?\s*(\d{1,5})\b/);
+    if (xy) return { x: Number(xy[1]), y: Number(xy[2]) };
+    const pair = normalizedInput.match(/\b(\d{1,5})\s*[,;]\s*(\d{1,5})\b/);
+    if (pair) return { x: Number(pair[1]), y: Number(pair[2]) };
+    const loose = normalizedInput.match(/\b(\d{1,5})\s+(\d{1,5})\b/);
+    if (loose) return { x: Number(loose[1]), y: Number(loose[2]) };
+    return null;
+  }
+
+  function parseTypeText(raw) {
+    const normalized = normalizeInstruction(raw);
+    if (!/\b(digite|type|escreva|preencha)\b/.test(normalized)) return null;
+    const quoted = String(raw || "").match(/["']([^"']{1,240})["']/);
+    return quoted ? quoted[1] : null;
+  }
+
+  function wait(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   function cursorForSelector(selector) {

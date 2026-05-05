@@ -111,6 +111,12 @@ button:disabled {
   color: #ffffff;
 }
 
+#open-agent {
+  background: #e4572e;
+  border-color: #e4572e;
+  color: #ffffff;
+}
+
 #start-live {
   background: #111827;
   border-color: #111827;

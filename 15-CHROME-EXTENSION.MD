@@ -56,6 +56,24 @@ Ativa a lente do PALS e registra amostras reais enquanto o operador move o
 ponteiro pela pagina. Esse modo preserva melhor o alicerce do projeto: a tela e
 explorada por movimento real do cursor.
 
+### Agent Overlay
+
+Abre uma janela flutuante na aba ativa. O operador pode escrever instrucoes como
+`mova o mouse para o botao login` ou `varra a tela com o ponteiro`.
+
+Para mover o ponteiro real, o overlay se conecta ao processo local:
+
+```bash
+node bin/pals.js mouse-bridge
+```
+
+O token exibido pelo bridge deve ser colado no overlay antes de executar a
+acao. Para testar sem mover o mouse:
+
+```bash
+node bin/pals.js mouse-bridge --dry-run
+```
+
 ## Downloads
 
 A extensao gera:
@@ -69,6 +87,8 @@ Extensoes comuns do Chrome nao devem mover o ponteiro real automaticamente sem
 permissoes invasivas como debugger/native host. Por isso:
 
 - use a extensao para auditoria local e captura viva humana;
+- use o `pals mouse-bridge` quando quiser movimento real do ponteiro com
+  consentimento local explicito;
 - use o CLI `pals scan --adaptive` quando precisar de varredura automatizada e
   repetivel em CI/local.
 
