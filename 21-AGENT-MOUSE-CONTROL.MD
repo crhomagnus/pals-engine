@@ -58,8 +58,9 @@ Cole esse token no **PALS Agent Overlay** antes de executar comandos.
 Antes de usar comandos por alvo, rode a calibracao:
 
 1. Clique em **Calibrate** no overlay.
-2. Coloque o ponteiro real exatamente sobre o marcador `1`.
-3. Clique em **Capture**.
+2. Clique em **Capture**.
+3. Durante a contagem de 2 segundos, coloque o ponteiro real exatamente sobre o
+   marcador `1`.
 4. Repita no marcador `2`.
 
 O PALS salva a conversao entre coordenadas da viewport e coordenadas reais da
@@ -91,8 +92,22 @@ escaneie esta pagina
 ```
 
 ```text
+escaneie 10 mil pontos ultrarapido
+```
+
+```text
 digite "teste@example.com"
 ```
+
+## High-Density Sweep
+
+O modo **Dense scan 10k** faz uma varredura logica de alta densidade na viewport,
+normalmente acima de 10.000 pontos. Esse modo e muito mais rapido do que mover o
+ponteiro real por todos os pontos, porque usa a percepcao PALS dentro da pagina
+para mapear a malha completa.
+
+O ponteiro real continua sendo usado para validacao, hover e execucao de acoes,
+mas nao como gargalo fisico dos 10.000 pontos.
 
 ## Fluxo De Conversa
 

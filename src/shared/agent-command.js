@@ -38,6 +38,21 @@ export function parseAgentInstruction(input) {
 
   const coordinate = parseCoordinates(normalized);
   const typeText = parseTypeText(raw);
+  const targetPoints = parsePointCount(normalized);
+
+  if (
+    /\b(denso|dense|alta precisao|high density|10k|ultrarapido|ultra rapido|malha densa)\b/.test(
+      normalized
+    ) ||
+    targetPoints >= 10000
+  ) {
+    return {
+      type: "dense-scan",
+      targetPoints: targetPoints || 10000,
+      label: `Run high-density scan with ${targetPoints || 10000} points`,
+      raw,
+    };
+  }
 
   if (/\b(varra|varrer|sweep|scan\s+mouse|escaneie\s+com\s+mouse)\b/.test(normalized)) {
     return {
@@ -163,6 +178,14 @@ function parseTypeText(rawInput) {
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 240);
+}
+
+function parsePointCount(normalizedInput) {
+  if (/\b10\s*mil\b/.test(normalizedInput)) return 10000;
+  if (/\bdez\s+mil\b/.test(normalizedInput)) return 10000;
+  const match = normalizedInput.match(/\b(\d{4,6})\s*(pontos|points|pts)?\b/);
+  if (!match) return 0;
+  return Number(match[1]);
 }
 
 function point(x, y) {

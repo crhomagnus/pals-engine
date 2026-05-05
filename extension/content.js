@@ -405,6 +405,7 @@
     const send = shadow.querySelector("[data-agent-send]");
     const execute = shadow.querySelector("[data-agent-execute]");
     const scan = shadow.querySelector("[data-agent-scan]");
+    const dense = shadow.querySelector("[data-agent-dense]");
     const test = shadow.querySelector("[data-agent-test]");
     const calibrate = shadow.querySelector("[data-agent-calibrate]");
     const captureCalibration = shadow.querySelector("[data-agent-capture-calibration]");
@@ -423,9 +424,10 @@
       renderAgentScan(state.agent.scan);
       addAgentLine("agent", scanSummary(state.agent.scan));
     });
+    dense.addEventListener("click", () => runAgentDenseScan(10000));
     test.addEventListener("click", testAgentBridge);
     calibrate.addEventListener("click", startAgentCalibration);
-    captureCalibration.addEventListener("click", captureAgentCalibrationPoint);
+    captureCalibration.addEventListener("click", scheduleAgentCalibrationCapture);
     resetCalibration.addEventListener("click", resetAgentCalibration);
     close.addEventListener("click", () => {
       hideAgentCalibrationMarker();
@@ -636,12 +638,13 @@
             <button class="primary" type="button" data-agent-execute disabled>Execute action</button>
           </div>
           <button type="button" data-agent-scan>Run PALS scan</button>
+          <button type="button" data-agent-dense>Dense scan 10k</button>
         </div>
       </section>
     `;
   }
 
-  function planAgentInstruction(raw) {
+  async function planAgentInstruction(raw) {
     const instruction = parseAgentInstruction(raw);
     addAgentLine("user", raw || "(empty)");
 
@@ -661,6 +664,11 @@
       return;
     }
 
+    if (instruction.type === "dense-scan") {
+      await runAgentDenseScan(instruction.targetPoints || 10000);
+      return;
+    }
+
     const action = buildAgentAction(instruction);
     if (!action.ok) {
       state.agent.pending = null;
@@ -672,6 +680,205 @@
     state.agent.pending = action.command;
     setExecuteEnabled(true);
     addAgentLine("agent", `${instruction.label}. ${describeAgentCommand(action.command)} Review and press Execute action.`);
+  }
+
+  async function runAgentDenseScan(targetPoints) {
+    try {
+      state.agent.pending = null;
+      setExecuteEnabled(false);
+      addAgentLine("agent", `Starting high-density scan with ${targetPoints} target points.`);
+      state.agent.scan = await highDensityAudit({
+        targetPoints,
+        chunkSize: 500,
+      });
+      renderAgentScan(state.agent.scan);
+      addAgentLine("agent", denseScanSummary(state.agent.scan));
+    } catch (error) {
+      addAgentLine("agent", `Dense scan error: ${error.message}`);
+    }
+  }
+
+  async function highDensityAudit(options = {}) {
+    const targetPoints = clamp(Math.round(options.targetPoints || 10000), 1000, 50000);
+    const chunkSize = clamp(Math.round(options.chunkSize || 500), 100, 2000);
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const aspect = Math.max(0.2, width / Math.max(1, height));
+    const columns = Math.max(1, Math.ceil(Math.sqrt(targetPoints * aspect)));
+    const rows = Math.max(1, Math.ceil(targetPoints / columns));
+    const regionSize = Math.max(24, Math.round(Math.sqrt((width * height) / 256)));
+    const samples = [];
+    const startedAt = performance.now();
+    const elementCache = new WeakMap();
+    const previousPointerEvents = state.agent.root?.style.pointerEvents || "";
+
+    if (state.agent.root) {
+      state.agent.root.style.pointerEvents = "none";
+    }
+
+    try {
+      for (let row = 0; row < rows; row += 1) {
+        for (let column = 0; column < columns; column += 1) {
+          const point = {
+            x: clamp(Math.round(((column + 0.5) * width) / columns), 0, Math.max(0, width - 1)),
+            y: clamp(Math.round(((row + 0.5) * height) / rows), 0, Math.max(0, height - 1)),
+          };
+          samples.push(denseSamplePoint(point, elementCache));
+          if (samples.length % chunkSize === 0) {
+            await wait(0);
+          }
+        }
+      }
+    } finally {
+      if (state.agent.root) {
+        state.agent.root.style.pointerEvents = previousPointerEvents;
+      }
+    }
+
+    const semantic = window.PALS.tools.semanticMap();
+    const durationMs = Math.round(performance.now() - startedAt);
+    const scan = createScan({
+      mode: "extension-high-density-viewport",
+      samples,
+      semantic,
+      grid: {
+        step: regionSize,
+        margin: 0,
+        coarsePoints: samples.length,
+        semanticPoints: semantic.interactive.length,
+        refinedPoints: 0,
+        rows,
+        columns,
+        targetPoints,
+      },
+    });
+    scan.density = {
+      targetPoints,
+      actualPoints: samples.length,
+      rows,
+      columns,
+      durationMs,
+      pointsPerSecond: Math.round((samples.length / Math.max(1, durationMs)) * 1000),
+      regionSize,
+    };
+    scan.findings = generateFindings(scan);
+    return scan;
+  }
+
+  function denseSamplePoint(point, cache) {
+    const element = denseElementFromPoint(point);
+    const descriptor = element ? denseElementDescriptor(element, cache) : null;
+    const explicit = descriptor?.kind === "explicit" ? 1 : 0;
+    const implicit = descriptor && descriptor.kind !== "explicit" ? 1 : 0;
+
+    return {
+      point,
+      phase: "dense",
+      summary: {
+        explicit,
+        implicit,
+        blocked: 0,
+      },
+      hitStack: descriptor ? [descriptor] : [],
+      underPointer: descriptor ? [descriptor] : [],
+      blocked: [],
+      hoverDelta: {
+        changed: false,
+        added: [],
+        removed: [],
+        textLengthDelta: 0,
+      },
+    };
+  }
+
+  function denseElementFromPoint(point) {
+    const element = document.elementFromPoint(point.x, point.y);
+    if (!element) return null;
+    return (
+      element.closest?.("a, button, input, select, textarea, summary, [role], [tabindex]") ||
+      element
+    );
+  }
+
+  function denseElementDescriptor(element, cache) {
+    if (cache.has(element)) return cache.get(element);
+
+    const selector = denseCssPath(element);
+    const tag = element.tagName.toLowerCase();
+    const role = element.getAttribute("role") || denseRole(element);
+    const style = getComputedStyle(element);
+    const explicit = ["a", "button", "input", "select", "textarea", "summary"].includes(tag);
+    const focusable = explicit || element.hasAttribute("tabindex");
+    const descriptor = {
+      kind: explicit || focusable || element.getAttribute("role") ? "explicit" : "implicit",
+      source: "dense-element",
+      name: denseElementName(element),
+      selector,
+      role,
+      cursor: style.cursor,
+      distance: 0,
+    };
+
+    if (descriptor.kind !== "explicit" && style.cursor === "pointer") {
+      descriptor.kind = "implicit";
+    }
+
+    cache.set(element, descriptor);
+    return descriptor;
+  }
+
+  function denseElementName(element) {
+    return (
+      element.getAttribute("aria-label") ||
+      element.getAttribute("title") ||
+      element.getAttribute("placeholder") ||
+      String(element.innerText || element.textContent || "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 80) ||
+      element.tagName.toLowerCase()
+    );
+  }
+
+  function denseRole(element) {
+    const tag = element.tagName.toLowerCase();
+    if (tag === "a") return "link";
+    if (tag === "button") return "button";
+    if (tag === "select") return "combobox";
+    if (tag === "textarea") return "textbox";
+    if (tag === "input") return "textbox";
+    if (tag === "summary") return "button";
+    return tag;
+  }
+
+  function denseCssPath(element) {
+    if (element.id) return `#${cssEscape(element.id)}`;
+
+    const parts = [];
+    let current = element;
+    while (current && current.nodeType === 1 && current !== document.documentElement) {
+      const tag = current.tagName.toLowerCase();
+      const parent = current.parentElement;
+      if (!parent) {
+        parts.unshift(tag);
+        break;
+      }
+
+      const siblings = Array.prototype.filter.call(parent.children, (child) => {
+        return child.tagName === current.tagName;
+      });
+      const index = siblings.indexOf(current) + 1;
+      parts.unshift(siblings.length > 1 ? `${tag}:nth-of-type(${index})` : tag);
+      current = parent;
+      if (parts.length >= 5) break;
+    }
+
+    return parts.join(" > ") || element.tagName.toLowerCase();
+  }
+
+  function cssEscape(value) {
+    if (window.CSS?.escape) return window.CSS.escape(value);
+    return String(value).replace(/["\\#.:,[\]>+~*]/g, "\\$&");
   }
 
   function buildAgentAction(instruction) {
@@ -694,6 +901,13 @@
     }
 
     if (instruction.type === "move-coordinates" || instruction.type === "click-coordinates") {
+      if (!pointInViewport(instruction.point)) {
+        return {
+          ok: false,
+          error: `Viewport coordinate ${instruction.point.x}, ${instruction.point.y} is outside the visible viewport.`,
+        };
+      }
+
       const screenPoint = toScreenPoint(instruction.point);
       return {
         ok: true,
@@ -796,13 +1010,36 @@
       step: 0,
       points,
       samples: [],
+      captureTimer: null,
     };
     showAgentCalibrationMarker(points[0], "1");
     renderAgentCalibrationStatus();
     addAgentLine(
       "agent",
-      "Calibration started. Put the real pointer exactly over marker 1, then press Capture."
+      "Calibration started. Press Capture, then move the real pointer over marker 1 during the countdown."
     );
+  }
+
+  function scheduleAgentCalibrationCapture() {
+    if (!state.agent.calibrationFlow) {
+      startAgentCalibration();
+      return;
+    }
+
+    const flow = state.agent.calibrationFlow;
+    if (flow.captureTimer) {
+      clearTimeout(flow.captureTimer);
+      flow.captureTimer = null;
+    }
+
+    addAgentLine(
+      "agent",
+      `Capturing point ${flow.step + 1} in 2 seconds. Move the real pointer over the visible marker now.`
+    );
+    flow.captureTimer = setTimeout(() => {
+      flow.captureTimer = null;
+      captureAgentCalibrationPoint();
+    }, 2000);
   }
 
   async function captureAgentCalibrationPoint() {
@@ -827,7 +1064,7 @@
         renderAgentCalibrationStatus();
         addAgentLine(
           "agent",
-          "First point captured. Put the pointer over marker 2, then press Capture."
+          "First point captured. Press Capture, then move the pointer over marker 2 during the countdown."
         );
         return;
       }
@@ -844,6 +1081,9 @@
   }
 
   function resetAgentCalibration() {
+    if (state.agent.calibrationFlow?.captureTimer) {
+      clearTimeout(state.agent.calibrationFlow.captureTimer);
+    }
     state.agent.calibration = null;
     state.agent.calibrationFlow = null;
     saveAgentCalibration(null);
@@ -991,17 +1231,44 @@
     }
 
     if (!best) return null;
-    const bounds = best.item.bounds;
+    const element = queryAgentElement(best.item.selector);
+    if (element?.scrollIntoView) {
+      element.scrollIntoView({ block: "center", inline: "center", behavior: "auto" });
+    }
+
+    const bounds = element ? element.getBoundingClientRect() : best.item.bounds;
     const viewport = {
       x: Math.round(bounds.x + bounds.width / 2),
       y: Math.round(bounds.y + bounds.height / 2),
     };
+    if (!pointInViewport(viewport)) {
+      return null;
+    }
+
     return {
       selector: best.item.selector,
       name: best.item.accessibleName || best.item.label || best.item.selector,
       viewport,
       screen: toScreenPoint(viewport),
     };
+  }
+
+  function queryAgentElement(selector) {
+    try {
+      return selector ? document.querySelector(selector) : null;
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  function pointInViewport(point) {
+    return (
+      point &&
+      point.x >= 0 &&
+      point.y >= 0 &&
+      point.x <= window.innerWidth &&
+      point.y <= window.innerHeight
+    );
   }
 
   function toScreenPoint(point) {
@@ -1040,6 +1307,11 @@
 
   function scanSummary(scan) {
     return `Scan found ${scan.aggregate.points} samples, ${scan.semantic.summary.interactive} interactive targets, ${scan.semantic.summary.fields} fields, and ${scan.findings.summary.total} findings.`;
+  }
+
+  function denseScanSummary(scan) {
+    const density = scan.density || {};
+    return `Dense scan captured ${density.actualPoints || scan.aggregate.points} points in ${density.durationMs || 0}ms (${density.pointsPerSecond || 0} points/s), with ${scan.aggregate.uniqueUnderPointer.length} unique targets and ${scan.findings.summary.total} findings.`;
   }
 
   function addAgentLine(kind, text) {
@@ -1104,6 +1376,15 @@
 
     const coordinate = parseCoordinates(normalized);
     const typed = parseTypeText(raw);
+    const targetPoints = parsePointCount(normalized);
+
+    if (/\b(denso|dense|alta precisao|high density|10k|ultrarapido|ultra rapido|malha densa)\b/.test(normalized) || targetPoints >= 10000) {
+      return {
+        type: "dense-scan",
+        targetPoints: targetPoints || 10000,
+        label: `Run high-density scan with ${targetPoints || 10000} points`,
+      };
+    }
 
     if (/\b(varra|varrer|sweep|scan mouse|escaneie com mouse)\b/.test(normalized)) {
       return { type: "sweep", step: 150, label: "Sweep current viewport with the real pointer" };
@@ -1159,6 +1440,13 @@
     if (!/\b(digite|type|escreva|preencha)\b/.test(normalized)) return null;
     const quoted = String(raw || "").match(/["']([^"']{1,240})["']/);
     return quoted ? quoted[1] : null;
+  }
+
+  function parsePointCount(normalizedInput) {
+    if (/\b10\s*mil\b/.test(normalizedInput)) return 10000;
+    if (/\bdez\s+mil\b/.test(normalizedInput)) return 10000;
+    const match = normalizedInput.match(/\b(\d{4,6})\s*(pontos|points|pts)?\b/);
+    return match ? Number(match[1]) : 0;
   }
 
   function wait(ms) {

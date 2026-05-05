@@ -358,6 +358,8 @@ test("parseAgentInstruction recognizes mouse commands", () => {
   assert.equal(parseAgentInstruction("clique no botao login").type, "click-target");
   assert.equal(parseAgentInstruction("varra a tela com o ponteiro").type, "sweep");
   assert.equal(parseAgentInstruction("digite \"hello\"").text, "hello");
+  assert.equal(parseAgentInstruction("escaneie 10 mil pontos ultrarapido").type, "dense-scan");
+  assert.equal(parseAgentInstruction("escaneie 10 mil pontos ultrarapido").targetPoints, 10000);
 });
 
 test("mouse bridge dry-run executes authorized local commands", async () => {
