@@ -470,6 +470,48 @@ h3 {
   border-top: 1px solid var(--line);
 }
 
+.footer a {
+  color: var(--ink);
+  border-bottom: 1px solid rgba(247, 243, 232, 0.34);
+}
+
+.privacy-page {
+  padding-top: var(--header);
+}
+
+.privacy-page h1 {
+  margin-bottom: 14px;
+  font-size: clamp(48px, 8vw, 112px);
+  line-height: 0.92;
+}
+
+.policy-date {
+  margin: 0;
+  color: var(--muted);
+}
+
+.privacy-copy {
+  width: min(860px, calc(100% - 36px));
+  margin: 0 auto;
+  padding: clamp(54px, 9vw, 112px) 0;
+}
+
+.privacy-copy h2 {
+  margin: 42px 0 12px;
+  font-size: clamp(24px, 4vw, 42px);
+  line-height: 1.04;
+}
+
+.privacy-copy h2:first-child {
+  margin-top: 0;
+}
+
+.privacy-copy p {
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1.62;
+}
+
 [data-reveal] {
   opacity: 0;
   transform: translateY(22px);

@@ -113,14 +113,32 @@ async function sendToActiveTab(message) {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab?.id) return { ok: false, error: "No active tab." };
+    if (!/^https?:\/\//i.test(tab.url || "")) {
+      return {
+        ok: false,
+        error: "Open a regular http/https page before running PALS.",
+      };
+    }
+    await injectPals(tab.id);
     return await chrome.tabs.sendMessage(tab.id, message);
   } catch (error) {
     return {
       ok: false,
       error:
-        "PALS content script is not available here. Reload the page or open a regular http/https tab.",
+        "PALS could not connect to this page. Reload it or open a regular http/https tab.",
     };
   }
+}
+
+async function injectPals(tabId) {
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    files: ["vendor/pals-engine.js"],
+  });
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    files: ["content.js"],
+  });
 }
 
 function downloadText(filename, text, type) {

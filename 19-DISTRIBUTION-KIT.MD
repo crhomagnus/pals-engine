@@ -14,6 +14,7 @@ pacote npm.
 - `dist/chrome-extension`
 - `dist/pals-chrome-extension-v0.1.0.zip`
 - `dist/pals-site-v0.1.0.tar.gz`
+- `dist/chrome-store-assets`
 - `extension/icons/icon-16.png`
 - `extension/icons/icon-48.png`
 - `extension/icons/icon-128.png`
@@ -45,6 +46,7 @@ dist/
   RELEASE-MANIFEST.json
   site/
   chrome-extension/
+  chrome-store-assets/
   pals-chrome-extension-v0.1.0.zip
   pals-site-v0.1.0.tar.gz
 ```
@@ -63,6 +65,7 @@ Rotas principais:
 /index.html
 /demo.html
 /demo.html?autorun=1
+/privacy.html
 ```
 
 Publicacao sem custo relevante:
@@ -87,6 +90,14 @@ dist/pals-chrome-extension-v0.1.0.zip
 ```
 
 O manifest inclui icones 16, 48 e 128 derivados da marca PALS.
+O release tambem gera assets iniciais para a primeira submissao manual:
+
+```text
+dist/chrome-store-assets/store-icon-128.png
+dist/chrome-store-assets/promo-small-440x280.png
+dist/chrome-store-assets/screenshot-home-1280x800.png
+dist/chrome-store-assets/screenshot-demo-1280x800.png
+```
 
 Fluxo:
 
@@ -94,6 +105,12 @@ Fluxo:
 2. Abrir `chrome://extensions`.
 3. Carregar `dist/chrome-extension` para teste local.
 4. Usar o ZIP para submissao quando a conta de publicacao estiver pronta.
+
+Checklist completo:
+
+```text
+20-CHROME-WEB-STORE-SUBMISSION.MD
+```
 
 ## Pacote npm
 
@@ -132,5 +149,7 @@ O workflow de CI roda:
 - `node scripts/prepare-release.js` gera `dist/`.
 - O ZIP da extensao e criado.
 - O site estatico e copiado para `dist/site`.
+- A pagina publica de privacidade esta incluida.
+- Os assets basicos da Chrome Web Store sao gerados quando as ferramentas locais existem.
 - O smoke test da demo publica passa.
 - O pacote npm fica leve e com dependencias opcionais.

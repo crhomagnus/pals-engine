@@ -24,6 +24,16 @@ O arquivo `extension/vendor/pals-engine.js` e copiado automaticamente pelo build
 node scripts/build-browser-bundle.js
 ```
 
+## Permissoes
+
+A extensao usa injecao sob demanda para reduzir risco de revisao e exposicao:
+
+- `activeTab`: libera acesso apenas ao tab ativo depois de acao explicita do usuario;
+- `scripting`: injeta os arquivos empacotados do PALS no tab ativo;
+- `downloads`: salva relatorios Markdown/JSON localmente.
+
+Ela nao declara `host_permissions` amplas e nao carrega codigo remoto.
+
 ## Como Carregar No Chrome/Chromium
 
 1. Abra `chrome://extensions`.
@@ -72,3 +82,8 @@ Essa extensao e adequada para:
 - coleta local de evidencias;
 - fluxo free/local do produto.
 
+## Submissao
+
+O pacote de submissao manual fica documentado em:
+
+- `20-CHROME-WEB-STORE-SUBMISSION.MD`

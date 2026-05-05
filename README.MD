@@ -35,6 +35,7 @@ acessibilidade, QA, automacao assistida e APIs comerciais.
 - [17-LAUNCH-SITE-AND-PRICING.MD](17-LAUNCH-SITE-AND-PRICING.MD)
 - [18-PUBLIC-DEMO.MD](18-PUBLIC-DEMO.MD)
 - [19-DISTRIBUTION-KIT.MD](19-DISTRIBUTION-KIT.MD)
+- [20-CHROME-WEB-STORE-SUBMISSION.MD](20-CHROME-WEB-STORE-SUBMISSION.MD)
 - [CHANGELOG.MD](CHANGELOG.MD)
 
 ## Codigo Existente
@@ -104,3 +105,4 @@ O CLI ja gera um relatorio inicial de auditoria com:
 - landing page comercial com pricing e checkout manual.
 - demo publica com scanner vivo no navegador.
 - release kit com site estatico, ZIP da extensao e workflows de CI/publicacao.
+- pacote de submissao manual para Chrome Web Store.

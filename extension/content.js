@@ -1,6 +1,11 @@
 (function installPalsExtensionContent() {
   "use strict";
 
+  if (globalThis.__PALS_EXTENSION_CONTENT_INSTALLED__) {
+    return;
+  }
+  globalThis.__PALS_EXTENSION_CONTENT_INSTALLED__ = true;
+
   const state = {
     live: false,
     samples: [],
